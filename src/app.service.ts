@@ -1,18 +1,32 @@
 import { Injectable } from '@nestjs/common';
-
+import { prisma } from "../lib/prisma.js"
 @Injectable()
 export class AppService {
 
-  private orders = [
-    { id: 1, product: 'Laptop', total: 999 },
-    { id: 2, product: 'Mouse', total: 29 }
-  ]
-
-  getOrders() {
-    return this.orders
+  async getOrders() {
+    const orders = await prisma.order.findMany()
+    await prisma.$disconnect()
+    return orders
   }
 
-  getOrderById(id: number) {
-    return this.orders.find(order => order.id == id)
+  async getOrderById(id: number) {
+    const order = await prisma.order.findFirst({
+      where: {
+        id: id
+      }
+    })
+    await prisma.$disconnect()
+    return order
+  }
+
+  async createOrder(){
+    const order = await prisma.order.create({
+      data: {
+        product: 'iPhone 15',
+        total: 499
+      }
+    })
+
+    return order
   }
 }

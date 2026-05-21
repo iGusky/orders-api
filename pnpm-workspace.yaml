@@ -1,5 +1,6 @@
 allowBuilds:
   '@nestjs/core': false
   '@prisma/engines': false
+  better-sqlite3: true
   prisma: false
   unrs-resolver: false
