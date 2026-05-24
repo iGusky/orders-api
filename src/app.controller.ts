@@ -1,5 +1,6 @@
-import { Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { AppService } from './app.service.js';
+import {CreateOrderDto} from './models/CreateOrderDto.js';
 
 @Controller()
 export class AppController {
@@ -16,7 +17,7 @@ export class AppController {
   }
 
   @Post()
-  createOrder(){
-    return this.appService.createOrder()
+  createOrder(@Body() orderDto: CreateOrderDto){
+    return this.appService.createOrder(orderDto)
   }
 }
