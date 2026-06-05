@@ -1,5 +1,5 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
-import { PrismaClient } from "../../generated/prisma/client.js";
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PrismaClient } from '../../generated/prisma/client.js';
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 @Injectable()
