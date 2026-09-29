@@ -1,98 +1,122 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# orders-api
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API para gestionar el inventario de un pequeño negocio que vende en bazares:
+alta de productos, entradas de mercancía y salidas (ventas), registradas en
+lenguaje natural. Por ejemplo: *"acabo de vender un paquete de 5 stickers en 45 pesos"*.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Stack: **NestJS 11** · **Prisma 7** · **SQLite** (desarrollo) · **pnpm**
 
-## Description
+📐 Modelo de datos y decisiones de diseño: [`docs/modelo-de-datos.md`](docs/modelo-de-datos.md)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Estructura de carpetas
 
-```bash
-$ pnpm install
+La organización es **por módulo de dominio (feature)** y no por tipo de archivo.
+Todo lo que pertenece a "productos" vive junto; lo que se comparte entre módulos
+vive en `common/`, `config/` o `database/`.
+
+```
+orders-api/
+├── docs/                          # Diseño y decisiones (modelo de datos, ADRs)
+├── prisma/                        # Esquema y migraciones (fuente de verdad de la BD)
+│   ├── schema.prisma
+│   └── migrations/
+├── generated/prisma/              # Cliente generado por Prisma (ignorado en git)
+├── src/
+│   ├── main.ts                    # Arranque: crea la app, pipes globales, puerto
+│   ├── app.module.ts              # Módulo raíz: solo importa otros módulos
+│   │
+│   ├── config/                    # Configuración tipada y validación de variables de entorno
+│   │
+│   ├── common/                    # Piezas transversales, sin lógica de negocio
+│   │   ├── decorators/            # Decoradores propios (@CurrentUser, @Public…)
+│   │   ├── filters/               # Exception filters (traducir errores a respuestas HTTP)
+│   │   ├── guards/                # Autenticación / autorización
+│   │   ├── interceptors/          # Logging, transformación de respuestas, timeouts
+│   │   ├── pipes/                 # Validación / transformación de entrada
+│   │   └── utils/                 # Funciones puras reutilizables
+│   │
+│   ├── database/                  # PrismaModule + PrismaService (acceso a datos compartido)
+│   │
+│   └── modules/                   # Un módulo Nest por contexto de negocio
+│       ├── products/              # Catálogo: alta, edición, consulta de productos
+│       │   ├── dto/               # Contratos de entrada/salida de la API
+│       │   ├── entities/          # Representación del dominio (no del ORM)
+│       │   ├── products.module.ts
+│       │   ├── products.controller.ts
+│       │   └── products.service.ts
+│       │
+│       ├── inventory/             # Movimientos de stock (entradas, salidas, ajustes)
+│       │   ├── dto/
+│       │   └── entities/
+│       │
+│       ├── sales/                 # Ventas: registra la venta y provoca una salida de inventario
+│       │   ├── dto/
+│       │   └── entities/
+│       │
+│       └── natural-language/      # Interpreta texto libre → comando estructurado
+│           └── dto/
+│
+└── test/
+    ├── jest-e2e.json
+    └── e2e/                       # Pruebas end-to-end por módulo (*.e2e-spec.ts)
 ```
 
-## Compile and run the project
+> Los archivos `*.module.ts`, `*.controller.ts`, `*.service.ts` dentro de cada
+> módulo se muestran como referencia; las carpetas se crearon vacías.
+
+### Responsabilidad de cada módulo
+
+| Módulo             | Responsabilidad                                                                 | Depende de            |
+|--------------------|---------------------------------------------------------------------------------|-----------------------|
+| `products`         | Qué se vende: nombre, precio, unidad de venta (paquete de 5, pieza…).           | `database`            |
+| `inventory`        | Cuánto hay. El stock se deriva de **movimientos**, no se sobreescribe a mano.   | `database`, `products`|
+| `sales`            | Registrar una venta y pedir a `inventory` la salida correspondiente.            | `inventory`           |
+| `natural-language` | Convertir *"vendí 5 stickers en 45 pesos"* en un DTO que `sales`/`inventory` entiendan. | —             |
+
+La dirección de dependencias va en un solo sentido
+(`natural-language → sales → inventory → products`). Si un módulo necesita
+importar "hacia atrás", es señal de que la responsabilidad está mal ubicada.
+
+### Convenciones
+
+- **Nombres de archivo en kebab-case** con sufijo de rol:
+  `create-product.dto.ts`, `products.service.ts`, `http-exception.filter.ts`.
+- **Un DTO por operación** (`create-*.dto.ts`, `update-*.dto.ts`), dentro de la
+  carpeta `dto/` de su módulo.
+- **Pruebas unitarias junto al archivo** que prueban (`*.spec.ts`);
+  pruebas e2e en `test/e2e/`.
+- Un módulo solo expone (`exports`) lo que otros módulos necesitan; el resto es privado.
+- Imports con extensión `.js` (el proyecto es ESM: `"type": "module"`).
+
+### Migración desde la estructura actual
+
+La estructura de la guía inicial aún convive con la nueva:
+
+| Actual                         | Destino sugerido                                  |
+|--------------------------------|---------------------------------------------------|
+| `src/prisma/`                  | `src/database/`                                   |
+| `src/orders/`                  | `src/modules/sales/` (una "orden" aquí es una venta) |
+| `src/models/CreateOrderDto.ts` | `src/modules/sales/dto/create-sale.dto.ts`        |
+| `src/app.controller.ts` / `app.service.ts` | Eliminar, o convertir en un endpoint de *health check* |
+
+Cuando termines de mover todo, `src/models/`, `src/orders/` y `src/prisma/` deben desaparecer.
+
+---
+
+## Puesta en marcha
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm install
+pnpm prisma migrate dev     # crea/actualiza la BD y genera el cliente
+pnpm run start:dev
 ```
 
-## Run tests
+## Pruebas
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm run test        # unitarias
+pnpm run test:e2e    # end-to-end
+pnpm run test:cov    # cobertura
 ```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
