@@ -96,6 +96,16 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* `CreateProductDto` convierte pesos a centavos (D4) en su constructor; hay que saber si esa línea llega a ejecutarse.
   *Agregado:* 2026-09-29
 
+- [ ] **Documentar la API con OpenAPI (`@nestjs/swagger`).**
+  ¿Cómo genera Nest la especificación a partir de los DTOs y decoradores? ¿Qué diferencia hay entre esa especificación y una colección de Bruno?
+  *Para qué:* que el contrato de la API (por ejemplo, los campos `Cents` de D15) quede documentado a partir del código y no se desactualice.
+  *Agregado:* 2026-09-30
+
+- [ ] **Secretos en una colección de Bruno versionada.**
+  ¿Cómo separa Bruno las variables de entorno normales de las secretas? ¿Qué archivos de la colección se guardan en Git y cuáles no?
+  *Para qué:* versionar la colección sin publicar tokens ni credenciales cuando el repo sea público (portafolio).
+  *Agregado:* 2026-09-30
+
 ## Opcionales (ya decididos, para profundizar)
 
 - [ ] **Dinero: centavos frente a `Decimal` frente a `float`.** Decidido en D4.

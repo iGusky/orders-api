@@ -1,0 +1,7 @@
+name: local
+variables:
+  - name: API_URL
+    value: http://127.0.0.1:3000
+  - secret: true
+    name: TEST
+    description: ""
