@@ -10,9 +10,13 @@
 ## 1. Contexto
 
 Inventario para un negocio pequeño que vende en bazares. Las operaciones se
-registran a mano, en lenguaje natural, a veces horas después de ocurrir:
+registran a mano, a veces horas después de ocurrir. El usuario piensa en ellas así:
 
 > "acabo de vender un paquete de 5 stickers en 45 pesos"
+
+Esa frase describe la **intención** del usuario, no el formato de entrada. Este proyecto es
+una **API REST** que recibe **JSON estructurado** desde un frontend (fuera de este repositorio),
+y el frontend es quien facilita la captura. La API no interpreta texto libre.
 
 El MVP es para un solo usuario, pero se diseña pensando en escalar.
 **Prioridad del MVP:** que el inventario (stock) sea siempre correcto. La precisión contable es secundaria.
@@ -27,7 +31,7 @@ Los nombres en código están en inglés (ver D9). Esta tabla relaciona cada té
 | **Movimiento**            | `Movement`          | Un evento que cambia el stock.                                               |
 | **Detalle de movimiento** | `MovementItem`      | Un renglón del movimiento: qué producto, cuántas unidades y qué importe.     |
 | **Tipo de movimiento**    | `MovementType`      | El **motivo** del movimiento.                                                |
-| **Dirección**             | `MovementDirection` | Si un ajuste **suma** (`IN`) o **resta** (`OUT`) stock. Solo se guarda en `ADJUSTMENT`. |
+| **Dirección**             | `MovementDirectionType` | Si un ajuste **suma** (`IN`) o **resta** (`OUT`) stock. Solo se guarda en `ADJUSTMENT`. |
 | **Reabastecimiento**      | `RESTOCK`           | Llega mercancía nueva.                                                       |
 | **Venta**                 | `SALE`              | Se vende producto a un cliente.                                              |
 | **Devolución**            | `RETURN`            | Un cliente regresa producto: vuelve al inventario y se le reembolsa dinero.  |
@@ -43,11 +47,12 @@ Los nombres en código están en inglés (ver D9). Esta tabla relaciona cada té
 
 | Campo         | Tipo              | Notas                                                    |
 |---------------|-------------------|----------------------------------------------------------|
-| `id`          | entero            | PK                                                       |
+| `id`          | UUID v7           | PK. Ver D13                                              |
 | `name`        | texto             |                                                          |
 | `description` | texto, opcional   |                                                          |
 | `priceCents`  | entero            | Precio de lista, en centavos                             |
 | `stock`       | entero            | **Valor precalculado** (caché). Ver D2                   |
+| `createdAt`   | fecha-hora        | Cuándo se dio de alta (lo pone el servidor)              |
 | `deletedAt`   | fecha, opcional   | Borrado lógico. `null` = activo                          |
 
 ### Movement (encabezado)
@@ -56,11 +61,11 @@ Inmutable: no se edita ni se borra (D11).
 
 | Campo         | Tipo                   | Notas                                                   |
 |---------------|------------------------|---------------------------------------------------------|
-| `id`          | entero                 | PK                                                      |
+| `id`          | UUID v7                | PK. Ver D13                                             |
 | `type`        | enum `MovementType`: `RESTOCK` / `SALE` / `RETURN` / `SHRINKAGE` / `ADJUSTMENT` | Motivo. Ver D3 |
-| `direction`   | enum `MovementDirection`: `IN` / `OUT`, opcional | Obligatorio en `ADJUSTMENT`; `null` en los demás tipos. Ver D3 |
-| `occurredAt`  | fecha-hora             | Cuándo pasó en el mundo real (lo dice el usuario)       |
-| `recordedAt`  | fecha-hora             | Cuándo se guardó en el sistema (lo pone el servidor)    |
+| `direction`   | enum `MovementDirectionType`: `IN` / `OUT`, opcional | Obligatorio en `ADJUSTMENT`; `null` en los demás tipos. Ver D3 |
+| `occurredAt`  | fecha-hora             | Cuándo pasó en el mundo real (lo captura el usuario)    |
+| `createdAt`   | fecha-hora             | Cuándo se guardó en el sistema (lo pone el servidor)    |
 | `totalCents`  | entero                 | Σ `lineTotalCents`, desnormalizada. Ver D6              |
 
 ### MovementItem (renglón)
@@ -69,9 +74,9 @@ Inmutable: no se edita ni se borra (D11).
 
 | Campo            | Tipo    | Notas                                          |
 |------------------|---------|------------------------------------------------|
-| `id`             | entero  | PK                                             |
-| `movementId`     | entero  | FK → Movement                                  |
-| `productId`      | entero  | FK → Product                                   |
+| `id`             | UUID v7 | PK. Ver D13                                    |
+| `movementId`     | UUID v7 | FK → Movement                                  |
+| `productId`      | UUID v7 | FK → Product                                   |
 | `quantity`       | entero  | Siempre **> 0**. Ver D3                        |
 | `lineTotalCents` | entero  | Importe total del renglón. Depende de `type`. Ver D5 |
 
@@ -116,10 +121,10 @@ Consecuencias:
 **D4. El dinero se guarda en centavos, como entero.**
 Por qué: evita errores de redondeo de punto flotante.
 Consecuencia: todo campo monetario lleva el sufijo `Cents`. La conversión a pesos
-solo se hace al presentar los datos.
+solo se hace al presentar los datos, y la hace el cliente (D15).
 
 **D5. Cada renglón guarda su importe total (`lineTotalCents`), no un precio unitario.**
-Por qué: el usuario dice el total ("3 stickers en 20 pesos"). El precio unitario (666.67) no es un dato real,
+Por qué: el usuario conoce y captura el total ("3 stickers en 20 pesos"). El precio unitario (666.67) no es un dato real,
 es una división del sistema, y redondearlo a entero pierde centavos (3 × 667 = 2001).
 
 | `type`       | `lineTotalCents`                  |
@@ -148,7 +153,7 @@ Por qué: los movimientos históricos siguen haciendo referencia a productos que
 Consecuencia: todas las consultas "normales" deben filtrar `deletedAt IS NULL`. Los movimientos
 no se borran de ninguna forma (D11).
 
-**D8. Dos fechas por movimiento: `occurredAt` y `recordedAt`.**
+**D8. Dos fechas por movimiento: `occurredAt` y `createdAt`.**
 Por qué: el registro es manual y puede hacerse horas después de la venta.
 Consecuencia: los reportes de ventas se basan en `occurredAt`.
 
@@ -175,6 +180,35 @@ Consecuencias:
 - También sirve para cuadrar el stock después de un conteo físico.
 - Un ajuste corrige el **stock**, no el **dinero** (`lineTotalCents` = 0). Ver P9.
 
+**D13. Los identificadores son UUID v7, generados por la base de datos/Prisma (`@default(uuid(7))`).**
+Por qué: a diferencia de un entero autoincremental, no revela cuántos registros existen ni permite adivinar
+IDs vecinos, y se puede generar sin coordinarse con la base de datos. A diferencia de UUID v4, empieza con un
+timestamp, así que los IDs nuevos quedan ordenados y los índices B-tree no se fragmentan.
+Consecuencias:
+- Los IDs se ordenan aproximadamente por fecha de creación, pero **no** sustituyen a `occurredAt` (D8).
+- Todas las FK usan el mismo tipo que la PK que referencian.
+
+**D14. La base de datos es PostgreSQL.**
+Por qué: soporta lo que el diseño necesita para escalar y mantener la consistencia: bloqueos de fila
+(`SELECT ... FOR UPDATE`, para I2), `CHECK constraints` (para I4, I9 e I10), tipos nativos (`uuid`,
+`timestamptz`) y concurrencia real de escritura.
+Consecuencias:
+- El historial de migraciones de SQLite no es compatible y se reinicia.
+- `PrismaService` debe usar el adaptador de PostgreSQL en lugar de `better-sqlite3`.
+- Estado actual: el schema ya apunta a PostgreSQL; el código de conexión aún usa SQLite (migración pendiente).
+
+**D15. La API recibe y devuelve el dinero en centavos; la conversión a pesos es responsabilidad del cliente.**
+Por qué: D4 limita la conversión a pesos al momento de presentar los datos, y quien los presenta es el frontend.
+Si la API aceptara pesos, tendría que redondear decimales de punto flotante (`0.29 * 100 = 28.999…`) y
+decidir qué hacer con montos de más de dos decimales.
+Consecuencias:
+- Todo campo monetario del contrato de la API (DTOs de entrada y respuestas) lleva el sufijo `Cents` y es un
+  entero, igual que en la base de datos. Así, un cliente que mande pesos por error es más fácil de detectar.
+- El backend no convierte entre pesos y centavos en ningún punto.
+- La validación de entrada exige enteros dentro del rango de la columna (`Int` de 32 bits). Un valor fuera de
+  rango debe responder 400, no un error de la base de datos.
+- El frontend convierte lo que captura el usuario ("45.50 pesos" → `4550`) y debe redondear al entero más cercano.
+
 ## 5. Invariantes
 
 Reglas que **siempre** deben cumplirse. Cada una debería tener al menos una prueba.
@@ -196,6 +230,8 @@ Reglas que **siempre** deben cumplirse. Cada una debería tener al menos una pru
 - Costos: costo de compra, cálculo de ganancia y valor de las pérdidas por merma.
 - Precio unitario y precio promedio de venta.
 - Reglas automáticas de precio por volumen (el importe lo indica el usuario en cada venta).
+- Interpretar texto en lenguaje natural: la API solo recibe JSON estructurado.
+- El frontend (vive en otro repositorio).
 - Ligar una devolución o un ajuste con el movimiento original.
 - Múltiples usuarios, autenticación y multi-tenancy.
 

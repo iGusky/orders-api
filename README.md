@@ -1,12 +1,18 @@
 # orders-api
 
-API para gestionar el inventario de un pequeño negocio que vende en bazares:
-alta de productos, entradas de mercancía y salidas (ventas), registradas en
-lenguaje natural. Por ejemplo: *"acabo de vender un paquete de 5 stickers en 45 pesos"*.
+API REST para gestionar el inventario de un pequeño negocio que vende en bazares:
+alta de productos, entradas de mercancía, ventas, devoluciones, mermas y ajustes.
 
-Stack: **NestJS 11** · **Prisma 7** · **SQLite** (desarrollo) · **pnpm**
+La API recibe **JSON estructurado** desde un frontend (fuera de este repositorio),
+que es quien ofrece al usuario una forma sencilla de capturar operaciones como
+*"vendí 5 stickers en 45 pesos"*. La API no interpreta texto libre.
+
+Stack: **NestJS 11** · **Prisma 7** · **PostgreSQL** · **pnpm**
+
+> ⚠️ En transición: el schema ya usa PostgreSQL, pero `PrismaService` y las migraciones aún son de SQLite.
 
 📐 Modelo de datos y decisiones de diseño: [`docs/modelo-de-datos.md`](docs/modelo-de-datos.md)
+📚 Temas a investigar: [`docs/temas-a-investigar.md`](docs/temas-a-investigar.md)
 
 ---
 
@@ -39,6 +45,8 @@ orders-api/
 │   │
 │   ├── database/                  # PrismaModule + PrismaService (acceso a datos compartido)
 │   │
+│   ├── orders/  models/  prisma/  # ⚠️ Código de la guía inicial: referencia temporal (ver abajo)
+│   │
 │   └── modules/                   # Un módulo Nest por contexto de negocio
 │       ├── products/              # Catálogo: alta, edición, consulta de productos
 │       │   ├── dto/               # Contratos de entrada/salida de la API
@@ -47,16 +55,9 @@ orders-api/
 │       │   ├── products.controller.ts
 │       │   └── products.service.ts
 │       │
-│       ├── inventory/             # Movimientos de stock (entradas, salidas, ajustes)
-│       │   ├── dto/
-│       │   └── entities/
-│       │
-│       ├── sales/                 # Ventas: registra la venta y provoca una salida de inventario
-│       │   ├── dto/
-│       │   └── entities/
-│       │
-│       └── natural-language/      # Interpreta texto libre → comando estructurado
-│           └── dto/
+│       └── movements/             # Libro de movimientos: RESTOCK, SALE, RETURN, SHRINKAGE, ADJUSTMENT
+│           ├── dto/               # Movement + MovementItem (el renglón no es un módulo aparte)
+│           └── entities/
 │
 └── test/
     ├── jest-e2e.json
@@ -70,13 +71,14 @@ orders-api/
 
 | Módulo             | Responsabilidad                                                                 | Depende de            |
 |--------------------|---------------------------------------------------------------------------------|-----------------------|
-| `products`         | Qué se vende: nombre, precio, unidad de venta (paquete de 5, pieza…).           | `database`            |
-| `inventory`        | Cuánto hay. El stock se deriva de **movimientos**, no se sobreescribe a mano.   | `database`, `products`|
-| `sales`            | Registrar una venta y pedir a `inventory` la salida correspondiente.            | `inventory`           |
-| `natural-language` | Convertir *"vendí 5 stickers en 45 pesos"* en un DTO que `sales`/`inventory` entiendan. | —             |
+| `products`         | Catálogo: qué se vende, precio de lista y stock (caché). Borrado lógico.        | `database`            |
+| `movements`        | Registrar movimientos inmutables y actualizar `Product.stock` en la misma transacción. Reportes de ventas. | `database`, `products`|
+
+Una venta ya no es una entidad propia: es un `Movement` de tipo `SALE`
+(ver [`docs/modelo-de-datos.md`](docs/modelo-de-datos.md)).
 
 La dirección de dependencias va en un solo sentido
-(`natural-language → sales → inventory → products`). Si un módulo necesita
+(`movements → products`). Si un módulo necesita
 importar "hacia atrás", es señal de que la responsabilidad está mal ubicada.
 
 ### Convenciones
@@ -92,20 +94,24 @@ importar "hacia atrás", es señal de que la responsabilidad está mal ubicada.
 
 ### Migración desde la estructura actual
 
-La estructura de la guía inicial aún convive con la nueva:
+La estructura de la guía inicial convive con la nueva y **se conserva a propósito** como
+referencia durante la implementación inicial. No sigue el modelo de datos actual.
 
-| Actual                         | Destino sugerido                                  |
-|--------------------------------|---------------------------------------------------|
-| `src/prisma/`                  | `src/database/`                                   |
-| `src/orders/`                  | `src/modules/sales/` (una "orden" aquí es una venta) |
-| `src/models/CreateOrderDto.ts` | `src/modules/sales/dto/create-sale.dto.ts`        |
+| Actual                         | Qué hacer                                                  |
+|--------------------------------|------------------------------------------------------------|
+| `src/orders/`                  | Referencia de controller/service/module. Eliminar cuando `movements` funcione. No se migra: `Order` no existe en el nuevo modelo. |
+| `src/models/CreateOrderDto.ts` | Se elimina junto con `orders/`.                            |
+| `src/prisma/`                  | Mover a `src/database/` (lo usan todos los módulos).       |
 | `src/app.controller.ts` / `app.service.ts` | Eliminar, o convertir en un endpoint de *health check* |
 
-Cuando termines de mover todo, `src/models/`, `src/orders/` y `src/prisma/` deben desaparecer.
+Cuando termines, `src/orders/`, `src/models/` y `src/prisma/` deben desaparecer.
 
 ---
 
 ## Puesta en marcha
+
+Requisitos: una instancia de PostgreSQL y la variable `DATABASE_URL` en `.env`
+(ej. `postgresql://user:password@localhost:5432/orders`).
 
 ```bash
 pnpm install

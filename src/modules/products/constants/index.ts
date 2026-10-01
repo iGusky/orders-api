@@ -1,0 +1,1 @@
+export const MIN_PRODUCT_PRICE_CENTS = 0

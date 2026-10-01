@@ -8,11 +8,50 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // provider = "sqlite"
+  provider = "postgres"
 }
 
-model Order {
-  id Int @id @default(autoincrement())
-  product String
-  total Int
+model Product {
+  id String @id @db.Uuid @default(uuid(7))
+  name String
+  description String?
+  priceCents Int
+  stock Int @default(0)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  movementItems MovementItem[]
+}
+
+enum MovementType {
+  RESTOCK
+  SALE
+  RETURN
+  SHRINKAGE
+  ADJUSTMENT
+}
+
+enum MovementDirectionType {
+  IN
+  OUT
+}
+
+model Movement {
+  id String @id @db.Uuid @default(uuid(7))
+  type MovementType
+  direction MovementDirectionType?
+  occurredAt DateTime
+  createdAt DateTime @default(now())
+  totalCents Int
+  items MovementItem[]
+}
+
+model MovementItem {
+  id String @id @db.Uuid @default(uuid(7))
+  movementId String @db.Uuid
+  movement Movement @relation(fields: [movementId], references: [id])
+  productId String @db.Uuid
+  product Product @relation(fields: [productId], references: [id])
+  quantity Int
+  lineTotalCents Int
 }
