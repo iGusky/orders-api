@@ -53,6 +53,21 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* recalcular el stock desde los movimientos y verificar I1.
   *Agregado:* 2026-09-28
 
+- [ ] **Paginación por offset frente a paginación por cursor (keyset).**
+  ¿Qué hace PostgreSQL con `OFFSET 100000`? ¿Por qué paginar sin `ORDER BY` da resultados repetidos o faltantes entre páginas? ¿Cómo funciona `cursor` en Prisma?
+  *Para qué:* `GET /products` paginado pensando en escala. Los UUID v7 (D13) se pueden ordenar por tiempo.
+  *Agregado:* 2026-10-08
+
+- [ ] **Búsqueda parcial (`contains` / `ILIKE '%x%'`) e índices.**
+  ¿Puede un índice B-tree acelerar un `ILIKE` con comodín al inicio? ¿Qué son la extensión `pg_trgm` y los índices GIN? ¿Cuándo conviene la búsqueda de texto completo (`tsvector`)?
+  *Para qué:* el filtro `search` de `GET /products` sin escanear toda la tabla a escala (D14).
+  *Agregado:* 2026-10-08
+
+- [ ] **El costo de `COUNT(*)` en PostgreSQL y sus alternativas.**
+  ¿Por qué `COUNT(*)` en PostgreSQL recorre las filas (pista: MVCC) en lugar de leer un contador? ¿Qué es `COUNT(*) OVER()`? ¿Cuándo basta con un "hay página siguiente" (pedir `perPage + 1`) en lugar del total?
+  *Para qué:* `totalItems` y `totalPages` en `GET /products` cuando haya muchos productos.
+  *Agregado:* 2026-10-08
+
 ## Concurrencia y consistencia
 
 - [ ] **Update atómico condicional en Prisma.**
@@ -71,6 +86,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* D2 (el movimiento y la actualización de `stock` se guardan juntos) e I3.
   *Agregado:* 2026-09-28
 
+- [ ] **Niveles de aislamiento en PostgreSQL (`READ COMMITTED`, `REPEATABLE READ`, `SERIALIZABLE`).**
+  ¿Las sentencias de una misma transacción ven la misma "foto" de la base de datos en `READ COMMITTED`? ¿Cómo se cambia el nivel en `$transaction` de Prisma (`isolationLevel`)?
+  *Para qué:* que `findMany` y `count` de `GET /products` sean consistentes entre sí, y más adelante I2 (stock nunca negativo).
+  *Agregado:* 2026-10-08
+
 ## Validación y capas
 
 - [ ] **`ValidationPipe` y `class-validator`.**
@@ -83,6 +103,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   Ejemplos: ¿dónde va I4 (`quantity > 0`)? ¿Y I9?
   *Para qué:* diseñar `movements` sin duplicar ni olvidar validaciones.
   *Agregado:* 2026-09-28
+
+- [ ] **Validar query params: pipes sueltos frente a un DTO de query.**
+  ¿Qué tipo tiene en realidad un query param (pista: `?search=a&search=b`)? ¿Qué hacen `DefaultValuePipe`, `ValidationPipe({ transform: true })` y `@Type(() => Number)` de `class-transformer`? ¿Cómo se pone un máximo a `perPage`?
+  *Para qué:* que `GET /products` no responda 400 ni 500 con parámetros ausentes o fuera de rango, y que nadie pida un millón de filas.
+  *Agregado:* 2026-10-08
 
 ## TypeScript y tooling
 
