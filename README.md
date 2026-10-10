@@ -115,6 +115,7 @@ Requisitos: una instancia de PostgreSQL y la variable `DATABASE_URL` en `.env`
 
 ```bash
 pnpm install
+pnpm prisma generate        # genera la carpeta "generated" de prisma (en caso de no tenerla)
 pnpm prisma migrate dev     # crea/actualiza la BD y genera el cliente
 pnpm run start:dev
 ```
