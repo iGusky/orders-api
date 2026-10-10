@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Optional, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/CreateProductDto.js';
 import { ProductsIndexParamsDto } from './dto/ProductsIndexParamsDto.js';

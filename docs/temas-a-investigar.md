@@ -121,6 +121,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* `CreateProductDto` convierte pesos a centavos (D4) en su constructor; hay que saber si esa línea llega a ejecutarse.
   *Agregado:* 2026-09-29
 
+- [ ] **`strictPropertyInitialization`: `!` frente a `?` frente a desactivar la regla.**
+  ¿Por qué TypeScript 6 marca TS2564 si el `tsconfig` no tiene `"strict": true` (pista: valores por defecto de TS 6)? ¿Qué le promete al compilador `name!: string` y qué pasa si la promesa es falsa? ¿Qué cambia en el tipo de `description` al escribir `description?: string`?
+  *Para qué:* quitar los constructores de los DTOs (`CreateProductDto`, `ProductsIndexParamsDto`) sin mentirle al compilador sobre qué campos pueden ser `undefined`.
+  *Agregado:* 2026-10-09
+
 - [ ] **Documentar la API con OpenAPI (`@nestjs/swagger`).**
   ¿Cómo genera Nest la especificación a partir de los DTOs y decoradores? ¿Qué diferencia hay entre esa especificación y una colección de Bruno?
   *Para qué:* que el contrato de la API (por ejemplo, los campos `Cents` de D15) quede documentado a partir del código y no se desactualice.

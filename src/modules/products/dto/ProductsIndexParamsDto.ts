@@ -5,14 +5,14 @@ import { MAX_POSTGRES_POSITIVE_INTEGER } from "../../../common/constants/index.j
 export class ProductsIndexParamsDto {
     @IsOptional()
     @IsString()
-    search: string;
+    search!: string;
 
     @IsInt()
     @IsPositive()
     @Min(1)
     @Max(500)
     @Type(() => Number)
-    perPage: number;
+    perPage!: number;
 
 
     @IsInt()
@@ -20,11 +20,5 @@ export class ProductsIndexParamsDto {
     @Min(1)
     @Max(MAX_POSTGRES_POSITIVE_INTEGER)
     @Type(() => Number)
-    page: number;
-
-    constructor(search: string, page: number, perPage: number) {
-        this.page = page
-        this.search = search
-        this.perPage = perPage
-    }
+    page!: number;
 }

@@ -6,21 +6,14 @@ export class CreateProductDto {
   
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
   @IsOptional()
-  description: string;
+  description!: string;
 
   @IsInt()
   @Max(MAX_POSTGRES_POSITIVE_INTEGER)
   @Min(MIN_PRODUCT_PRICE_CENTS)
-  priceCents: number;
-
-
-  constructor(name: string, description: string, priceCents: number) {
-    this.description = description;
-    this.name = name;
-    this.priceCents = priceCents;
-  }
+  priceCents!: number;
 }
