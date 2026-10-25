@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateProductDto } from './dto/CreateProductDto.js';
 import { ProductsIndexParamsDto } from './dto/ProductsIndexParamsDto.js';
 import { ProductWhereInput } from '../../../generated/prisma/models.js';
+import { Product } from '../../../generated/prisma/client.js';
 
 @Injectable()
 export class ProductsService {
@@ -48,5 +49,11 @@ export class ProductsService {
       },
     });
     return result;
+  }
+
+  async getProductById(id: string): Promise<Product | null> {
+    if(!id.trim) return null;
+    const product = await this.prisma.product.findUnique({where: { id: id }})
+    return product;
   }
 }

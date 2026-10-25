@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Max, Min } from "class-validator";
+import { IsInt, IsOptional, IsPositive, IsString, Max, Min } from "class-validator";
 import {Type} from 'class-transformer'
 import { MAX_POSTGRES_POSITIVE_INTEGER } from "../../../common/constants/index.js";
 

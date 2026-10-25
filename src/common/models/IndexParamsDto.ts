@@ -1,0 +1,24 @@
+import { IsInt, IsOptional, IsPositive, IsString, Max, Min } from "class-validator";
+import {Type} from 'class-transformer'
+import { MAX_POSTGRES_POSITIVE_INTEGER } from "../constants/index.js";
+
+export class IndexParamsDto {
+    @IsOptional()
+    @IsString()
+    search!: string;
+
+    @IsInt()
+    @IsPositive()
+    @Min(1)
+    @Max(500)
+    @Type(() => Number)
+    perPage!: number;
+
+
+    @IsInt()
+    @IsPositive()
+    @Min(1)
+    @Max(MAX_POSTGRES_POSITIVE_INTEGER)
+    @Type(() => Number)
+    page!: number;
+}

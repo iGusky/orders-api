@@ -86,6 +86,16 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* D2 (el movimiento y la actualización de `stock` se guardan juntos) e I3.
   *Agregado:* 2026-09-28
 
+- [ ] **Propagar una transacción entre varios services.**
+  ¿Por qué un `PrismaService` inyectado no "sabe" que está dentro de un `$transaction`? Comparar pasar `tx` como parámetro frente a guardarlo en `AsyncLocalStorage` (librería `@nestjs-cls/transactional`). ¿Qué es *unit of work*?
+  *Para qué:* que `MovementsService` y `MovementItemService` escriban en la misma transacción (D2, I3).
+  *Agregado:* 2026-10-24
+
+- [ ] **Escrituras anidadas de Prisma (nested writes).**
+  ¿Qué hace `create` con `data: { relacion: { create: [...] } }`? ¿Prisma lo ejecuta dentro de una transacción? ¿Cuándo basta con eso y cuándo hace falta una transacción interactiva?
+  *Para qué:* crear `Movement` + `MovementItem`s de forma atómica (I3).
+  *Agregado:* 2026-10-24
+
 - [ ] **Niveles de aislamiento en PostgreSQL (`READ COMMITTED`, `REPEATABLE READ`, `SERIALIZABLE`).**
   ¿Las sentencias de una misma transacción ven la misma "foto" de la base de datos en `READ COMMITTED`? ¿Cómo se cambia el nivel en `$transaction` de Prisma (`isolationLevel`)?
   *Para qué:* que `findMany` y `count` de `GET /products` sean consistentes entre sí, y más adelante I2 (stock nunca negativo).
@@ -108,6 +118,16 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Qué tipo tiene en realidad un query param (pista: `?search=a&search=b`)? ¿Qué hacen `DefaultValuePipe`, `ValidationPipe({ transform: true })` y `@Type(() => Number)` de `class-transformer`? ¿Cómo se pone un máximo a `perPage`?
   *Para qué:* que `GET /products` no responda 400 ni 500 con parámetros ausentes o fuera de rango, y que nadie pida un millón de filas.
   *Agregado:* 2026-10-08
+
+- [ ] **Validar arreglos de objetos anidados en un DTO.**
+  ¿Qué valida `class-validator` dentro de `items` si solo tiene `@IsNotEmpty()`? ¿Qué hacen `@IsArray`, `@ArrayNotEmpty`, `@ValidateNested({ each: true })` y `@Type(() => CreateMovementItemDto)`? ¿Por qué hace falta `@Type`?
+  *Para qué:* que un `POST /movements` con `quantity: -5` o sin `productId` no llegue a la base de datos (I4).
+  *Agregado:* 2026-10-24
+
+- [ ] **Compartir providers entre módulos en Nest (`exports` / `imports`).**
+  ¿Qué pasa si declaras `ProductsService` en `providers` de dos módulos distintos? ¿Cuántas instancias hay? ¿Cómo se exporta desde `ProductModule`?
+  *Para qué:* `MovementsModule` necesitará `ProductsService` para actualizar el stock (D2).
+  *Agregado:* 2026-10-24
 
 ## TypeScript y tooling
 
@@ -135,6 +155,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Cómo separa Bruno las variables de entorno normales de las secretas? ¿Qué archivos de la colección se guardan en Git y cuáles no?
   *Para qué:* versionar la colección sin publicar tokens ni credenciales cuando el repo sea público (portafolio).
   *Agregado:* 2026-09-30
+
+- [ ] **`async` dentro de `forEach` y promesas flotantes.**
+  ¿Por qué `forEach` no espera a un callback `async`? ¿Qué es una *floating promise* y qué pasa con su error (*unhandled rejection*)? Comparar `for...of` con `await` frente a `Promise.all`. ¿Qué regla de ESLint lo detecta (`@typescript-eslint/no-floating-promises`)?
+  *Para qué:* `createMovement` hoy responde antes de que se creen los `MovementItem`s y sus errores se pierden.
+  *Agregado:* 2026-10-24
 
 ## Opcionales (ya decididos, para profundizar)
 

@@ -1,0 +1,23 @@
+info:
+  name: Get all Movemenets Paginated
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{API_URL}}/movements?page=1&perPage=50"
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: perPage
+      value: "50"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

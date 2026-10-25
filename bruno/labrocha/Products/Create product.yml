@@ -10,9 +10,9 @@ http:
     type: json
     data: |-
       {
-        "name": "Pines G",
-        "description": "",
-        "priceCents": 3500
+        "name": "Totebag",
+        "description": "Hechas de manta con grabados. Diferentes diseños.",
+        "priceCents": 25000
       }
   auth: inherit
 
