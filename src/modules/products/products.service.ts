@@ -4,6 +4,7 @@ import { CreateProductDto } from './dto/CreateProductDto.js';
 import { ProductsIndexParamsDto } from './dto/ProductsIndexParamsDto.js';
 import { ProductWhereInput } from '../../../generated/prisma/models.js';
 import { Product } from '../../../generated/prisma/client.js';
+import { ProductNotFoundError } from './exceptions/ProductNotFoundError.js';
 
 @Injectable()
 export class ProductsService {
@@ -52,8 +53,9 @@ export class ProductsService {
   }
 
   async getProductById(id: string): Promise<Product | null> {
-    if(!id.trim) return null;
-    const product = await this.prisma.product.findUnique({where: { id: id }})
+    if(!id.trim()) return null;
+    const product = await this.prisma.product.findUnique({where: { id: id, deletedAt: null }})
+    if(!product) throw new ProductNotFoundError(id)
     return product;
   }
 }

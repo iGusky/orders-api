@@ -1,9 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import {  Injectable } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { CreateMovementDto } from "./dto/CreateMovementDto.js";
 import { MovementItemService } from "./movementItems.service.js";
 import { IndexParamsDto } from "../../common/models/IndexParamsDto.js";
-import { MovementWhereInput } from "../../../generated/prisma/models.js";
 
 @Injectable()
 export class MovementsService {
@@ -26,12 +25,15 @@ export class MovementsService {
                 occurredAt: data.ocurredAt ?? new Date()
             }
         })
+        try {           
+            for(const item of data.items){
+                await this.movementItermsService.createAndAppendItem(item, movement)
+            }
 
-        for(const item of data.items){
-            await this.movementItermsService.createAndAppendItem(item, movement.id)
+            return(movement)
+        } catch(e) {
+            throw(e)
         }
-        
-        return movement
     }
 
     async getMovemenetsPaginated({perPage, page, search}: IndexParamsDto) {

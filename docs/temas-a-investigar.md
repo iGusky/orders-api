@@ -101,6 +101,16 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* que `findMany` y `count` de `GET /products` sean consistentes entre sí, y más adelante I2 (stock nunca negativo).
   *Agregado:* 2026-10-08
 
+- [ ] **Deadlocks al actualizar varias filas en una transacción.**
+  ¿Qué pasa si una transacción bloquea el producto A y luego el B, y otra al mismo tiempo bloquea B y luego A? ¿Qué hace PostgreSQL cuando lo detecta (error `40P01`)? ¿Por qué ordenar las actualizaciones (por ejemplo, por `productId`) lo evita? ¿Cuándo conviene reintentar la transacción?
+  *Para qué:* un movimiento con varios items actualiza el `stock` de varios productos en la misma transacción (D2, I2).
+  *Agregado:* 2026-10-24
+
+- [ ] **Conciliar una caché con su fuente de verdad.**
+  ¿Cómo detectar que `Product.stock` ya no coincide con la suma de los movimientos? ¿Conviene un endpoint o job que recalcule y compare? ¿Qué son los *snapshots* en *event sourcing* y en qué se parecen a `stock`?
+  *Para qué:* verificar I1 y tener con qué reparar el stock si algún bug lo descuadra (D2).
+  *Agregado:* 2026-10-24
+
 ## Validación y capas
 
 - [ ] **`ValidationPipe` y `class-validator`.**
@@ -128,6 +138,48 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Qué pasa si declaras `ProductsService` en `providers` de dos módulos distintos? ¿Cuántas instancias hay? ¿Cómo se exporta desde `ProductModule`?
   *Para qué:* `MovementsModule` necesitará `ProductsService` para actualizar el stock (D2).
   *Agregado:* 2026-10-24
+
+## Diseño de la API y respuestas
+
+- [ ] **Ciclo de vida de una petición en Nest (*request lifecycle*).**
+  ¿En qué orden se ejecutan middleware, guards, interceptors, pipes, el handler y los exception filters? ¿Qué partes ven la respuesta exitosa y cuáles ven el error?
+  *Para qué:* saber dónde colocar el "sobre" (*envelope*) de respuesta estándar `{ statusCode, data, message }`.
+  *Agregado:* 2026-10-25
+
+- [ ] **Interceptors y el operador `map` de RxJS.**
+  ¿Qué devuelve `next.handle()` y por qué es un `Observable`? ¿Cómo se transforma el valor que regresa el controller? ¿Cómo se lee el status HTTP real desde `ExecutionContext`? ¿Qué pasa con el interceptor si el handler usa `@Res()`?
+  *Para qué:* envolver todas las respuestas exitosas con la misma estructura sin repetir código en cada controller.
+  *Agregado:* 2026-10-25
+
+- [ ] **Exception filters globales y fuga de información.**
+  ¿Qué responde Nest por defecto ante una `HttpException` y ante un error desconocido (por ejemplo, de Prisma)? ¿Cómo se usa `@Catch()` con `ArgumentsHost`? ¿Por qué no hay que devolver `error.message` de un error interno al cliente?
+  *Para qué:* que los errores también usen la estructura estándar, sin exponer detalles de la base de datos.
+  *Agregado:* 2026-10-25
+
+- [ ] **`statusCode` en el body frente al status HTTP; RFC 9457 (*Problem Details*).**
+  ¿Qué gana y qué pierde un cliente si el status viene duplicado en el body? ¿Qué propone RFC 9457 para errores (`type`, `title`, `status`, `detail`)? ¿Dónde va la metadata de paginación (`data` + `meta`)?
+  *Para qué:* decidir el contrato de respuesta de la API (y registrarlo como decisión en `modelo-de-datos.md`).
+  *Agregado:* 2026-10-25
+
+- [ ] **Metadata por endpoint: `SetMetadata` / `Reflector.createDecorator` y `Reflector`.**
+  ¿Cómo un decorador propio (por ejemplo, `@ResponseMessage('Movimiento creado')`) deja un dato que un interceptor puede leer después?
+  *Para qué:* llenar el campo `message` de la respuesta estándar sin que el service conozca detalles HTTP.
+  *Agregado:* 2026-10-25
+
+- [ ] **Elegir el status HTTP de un error de negocio: 400, 403, 409 o 422.**
+  ¿Qué significa realmente 403 (pista: autorización)? ¿Cuál es la diferencia entre 409 *Conflict* y 422 *Unprocessable Content*? ¿Cuál corresponde a "no hay stock suficiente"? ¿Qué subclases de `HttpException` trae Nest (`NotFoundException`, `ConflictException`, ...)?
+  *Para qué:* que el frontend pueda distinguir "el producto no existe" de "no alcanza el stock" (I2) solo con el status.
+  *Agregado:* 2026-10-25
+
+- [ ] **Excepciones de dominio frente a `HttpException` en los services.**
+  ¿Debe un service saber que existe HTTP? ¿Qué pasa si el mismo service se usa desde un job, un CLI o una cola? ¿Cómo se define una excepción propia (`InsufficientStockError`) y se traduce a HTTP en un exception filter?
+  *Para qué:* que `MovementItemService` exprese reglas de negocio (I2) sin acoplarse al transporte.
+  *Agregado:* 2026-10-25
+
+- [ ] **Errores como valores: patrón `Result` / `Either` frente a lanzar excepciones.**
+  ¿Qué diferencia hay entre un error *esperado* (no hay stock) y uno *inesperado* (se cayó la base de datos)? ¿Por qué TypeScript no te obliga a manejar un `throw` pero sí un `Result<T, E>`? ¿Qué aportan librerías como `neverthrow`? ¿Qué es la arquitectura hexagonal (*ports and adapters*) y dónde quedan ahí los controllers y los workers?
+  *Para qué:* decidir cómo comunica `MovementItemService` sus reglas de negocio (I2) a quien lo llame, sea HTTP o un job.
+  *Agregado:* 2026-10-25
 
 ## TypeScript y tooling
 

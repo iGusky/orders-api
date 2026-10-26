@@ -16,11 +16,6 @@ http:
             "productId": "01a0f4c8-8e8e-727a-9f0a-7b12845b8b5d",
             "lineTotalCents": 10000,
             "quantity": 1
-          },
-          {
-            "productId": "01a11e19-c0d1-70e8-b06d-eb30a0d33ae8",
-            "lineTotalCents": 50000,
-            "quantity": 2
           }
         ]
       }

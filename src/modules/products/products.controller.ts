@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseFilters } from '@nestjs/common';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/CreateProductDto.js';
 import { IndexParamsDto } from '../../common/models/IndexParamsDto.js';
+import { DomainErrorFilter } from '../../common/filters/domain-error.filter.js';
 
 @Controller('products')
+@UseFilters(DomainErrorFilter)
 export class ProductsController {
   constructor(private readonly service: ProductsService) {}
 
@@ -19,6 +21,10 @@ export class ProductsController {
 
   @Get(':id')
   async getProductById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.service.getProductById(id)
+    try {
+      return this.service.getProductById(id)
+    } catch(e) {
+      throw e
+    }
   }
 }
