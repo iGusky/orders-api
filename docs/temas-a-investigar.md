@@ -91,6 +91,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* que `MovementsService` y `MovementItemService` escriban en la misma transacción (D2, I3).
   *Agregado:* 2026-10-24
 
+- [ ] **Rollback de la base de datos frente a acciones compensatorias (patrón *Saga*).**
+  ¿Por qué "borrar a mano lo que ya insertaste" en un `catch` no equivale a un `ROLLBACK`? ¿Qué pasa si el proceso se cae entre el insert y el borrado, o si otra petición lee el registro en medio? ¿Cuándo sí hacen falta acciones compensatorias (pista: varias bases de datos o servicios externos, donde no hay una sola transacción)?
+  *Para qué:* entender por qué I3 (movimiento e items atómicos) se resuelve con una transacción y no con try/catch, y qué cambiaría si el stock viviera en otro servicio.
+  *Agregado:* 2026-10-26
+
 - [ ] **Escrituras anidadas de Prisma (nested writes).**
   ¿Qué hace `create` con `data: { relacion: { create: [...] } }`? ¿Prisma lo ejecuta dentro de una transacción? ¿Cuándo basta con eso y cuándo hace falta una transacción interactiva?
   *Para qué:* crear `Movement` + `MovementItem`s de forma atómica (I3).

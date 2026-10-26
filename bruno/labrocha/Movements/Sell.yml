@@ -1,5 +1,5 @@
 info:
-  name: Create movement
+  name: Sell
   type: http
   seq: 1
 
@@ -10,12 +10,12 @@ http:
     type: json
     data: |-
       {
-        "type": "SALE",
+        "type": "RESTOCK",
         "items": [
           {
             "productId": "01a0f4c8-8e8e-727a-9f0a-7b12845b8b5d",
-            "lineTotalCents": 10000,
-            "quantity": 1
+            "lineTotalCents": 0,
+            "quantity": 4
           }
         ]
       }

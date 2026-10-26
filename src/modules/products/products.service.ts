@@ -5,10 +5,13 @@ import { ProductsIndexParamsDto } from './dto/ProductsIndexParamsDto.js';
 import { ProductWhereInput } from '../../../generated/prisma/models.js';
 import { Product } from '../../../generated/prisma/client.js';
 import { ProductNotFoundError } from './exceptions/ProductNotFoundError.js';
+import { UpdateProductDto } from './dto/UpdateProductDto.js';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma>) {}
 
   async getAllProductsPaginated({ search, page, perPage }: ProductsIndexParamsDto) {
     
@@ -23,13 +26,13 @@ export class ProductsService {
     }
 
     const [products, totalItems] = await Promise.all([
-      this.prisma.product.findMany({
+      this.txHost.tx.product.findMany({
             where,
             orderBy: {id: 'desc'},
             take: perPage,
             skip: itemsToSkip
           }),
-      this.prisma.product.count({where})
+      this.txHost.tx.product.count({where})
     ])
     
     return {
@@ -42,7 +45,7 @@ export class ProductsService {
   }
 
   async createProduct(product: CreateProductDto) {
-    const result = await this.prisma.product.create({
+    const result = await this.txHost.tx.product.create({
       data: {
         name: product.name,
         priceCents: product.priceCents,
@@ -52,10 +55,18 @@ export class ProductsService {
     return result;
   }
 
-  async getProductById(id: string): Promise<Product | null> {
-    if(!id.trim()) return null;
-    const product = await this.prisma.product.findUnique({where: { id: id, deletedAt: null }})
+  async getProductById(id: string): Promise<Product> {
+    const product = await this.txHost.tx.product.findUnique({where: { id: id.trim(), deletedAt: null }})
     if(!product) throw new ProductNotFoundError(id)
     return product;
+  }
+
+  async updateProduct(newProductData: UpdateProductDto, id: string) {
+    return await this.txHost.tx.product.update({
+      where: {id},
+      data: {
+        ...newProductData
+      }
+    })
   }
 }

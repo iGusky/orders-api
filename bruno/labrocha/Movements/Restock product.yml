@@ -1,0 +1,29 @@
+info:
+  name: Restock product
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{API_URL}}/movements"
+  body:
+    type: json
+    data: |-
+      {
+        "type": "RESTOCK",
+        "items": [
+          {
+            "productId": "01a0f4c8-8e8e-727a-9f0a-7b12845b8b5d",
+            "lineTotalCents": 0,
+            "quantity": 1
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

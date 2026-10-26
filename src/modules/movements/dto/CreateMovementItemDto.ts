@@ -5,8 +5,8 @@ export class CreateMovementItemDto {
     @IsUUID()
     productId!: string
 
-    @IsPositive()
     @IsInt()
+    @IsPositive()
     quantity!: number
 
     @IsPositive()

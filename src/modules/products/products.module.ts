@@ -7,5 +7,6 @@ import { ProductsController } from './products.controller.js';
   providers: [ProductsService],
   controllers: [ProductsController],
   imports: [PrismaModule],
+  exports: [ProductsService]
 })
 export class ProductModule {}

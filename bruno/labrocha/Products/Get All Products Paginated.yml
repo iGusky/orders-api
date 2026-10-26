@@ -5,14 +5,14 @@ info:
 
 http:
   method: GET
-  url: "{{API_URL}}/products?perPage=500&page=1"
+  url: "{{API_URL}}/products?perPage=50&page=1"
   params:
     - name: search
       value: bolsillo
       type: query
       disabled: true
     - name: perPage
-      value: "500"
+      value: "50"
       type: query
     - name: page
       value: "1"
