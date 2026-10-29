@@ -1,0 +1,11 @@
+{
+  "name": "web",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "axios": "^1.21.0",
+    "react-router": "^8.5.1",
+    "tailwindcss": "^4.3.3"
+  }
+}
