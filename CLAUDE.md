@@ -1,26 +1,24 @@
-# Claude: 
-Estoy retomando el Backend y aprendiendo NestJS al mismo tiempo.
-No escribas código de lógica de negocio ni de patrones distribuidos. Hazme preguntas, señala problemas en mi código, explícame conceptos y dame pistas. Solo genera boilerplate (DTOs, configuración, módulos vacíos) cuando te lo pida explícitamente.
+<!-- nx configuration start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
 
-## Acerca del proyecto
-Necesito generar un software que ayude a gestionar un inventario de productos, gestionar salidas de inventario "ventas" y permitir agregar nuevos items al producto.
+# General Guidelines for working with Nx
 
-De momento solo esta pensando para un pequeño negocio informal, la venta se realiza principalmente en bazares y el registro de movimientos se hará de forma manual. El usuario piensa en términos como "acabo de vender un paquete de 5 stickers en 45 pesos" y por ende hay que restar 5 stickers al inventario.
+- For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
+- When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
+- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npm exec nx test`) - avoids using globally installed CLI
+- You have access to the Nx MCP server and its tools, use them to help the user
+- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md`. Not all plugins have this file - proceed without it if unavailable.
+- NEVER guess CLI flags - always check nx_docs or `--help` first when unsure
 
-### Alcance actual
-- Este proyecto es **solo una API REST** que recibe datos **estructurados (JSON)**.
-- Un **frontend** (fuera de este repo) será el que capture la información de forma fácil para el usuario y la envíe a la API.
-- La API **no interpreta texto en lenguaje natural**. Frases como "vendí 5 stickers en 45 pesos" describen la intención del usuario, no el formato de entrada.
+## Scaffolding & Generators
 
-## Idioma
-- El código (clases, propiedades, enums, rutas, tablas, commits) se escribe en **inglés**.
-- La documentación (`README.md`, `docs/`) y las explicaciones se escriben en **español**.
-- El modelo de datos y las decisiones de diseño viven en `docs/modelo-de-datos.md`, que es la fuente de verdad.
+- For scaffolding tasks (creating apps, libs, project structure, setup), ALWAYS invoke the `nx-generate` skill FIRST before exploring or calling MCP tools
 
-## Flujo de trabajo
-Mis solicitudes estan más enfocadas a mejorar y aprender. Explicame conceptos propios del framework, de programación orientada a objetos o de seguridad y concurrencia. Actua como mi guía o tutor. Aunque esta app esté pensada para un solo usuario, hay que pensarlo como si fuera un proyecto para miles o cientos de miles de usuarios.
+## When to use nx_docs
 
-### Temas a investigar
-- Cada vez que me sugieras investigar un tema, agrégalo a `docs/temas-a-investigar.md` como pendiente (`- [ ]`), en la sección que corresponda, con: la pregunta concreta, para qué sirve en el proyecto (con referencia a decisiones/invariantes si aplica) y la fecha.
-- Antes de agregar un tema, revisa que no exista ya en el archivo.
-- **Nunca marques un tema como completado**: eso lo hago yo cuando lo investigo.
+- USE for: advanced config options, unfamiliar flags, migration guides, plugin configuration, edge cases
+- DON'T USE for: basic generator syntax (`nx g @nx/react:app`), standard commands, things you already know
+- The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
+
+
+<!-- nx configuration end-->

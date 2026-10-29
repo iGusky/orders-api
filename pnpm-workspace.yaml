@@ -1,10 +1,4 @@
 allowBuilds:
-  '@nestjs/core': false
-  '@parcel/watcher': true
-  '@prisma/engines': false
-  better-sqlite3: true
-  esbuild: false
-  msgpackr-extract: false
-  prisma: false
-  unrs-resolver: false
-  workerd: false
+  nx: false
+projects:
+  - 'apps/'
