@@ -20,6 +20,14 @@ export type Movement =
 
 export type PaginatedMovements = Paginated<Movement>;
 
+// Filtros de GET /movements. direction solo aplica con type ADJUSTMENT; las fechas van juntas y filtran occurredAt.
+export interface MovementFilters {
+  type?: MovementType;
+  direction?: MovementDirection;
+  dateStart?: string;  // fecha ISO 8601, inclusive
+  dateEnd?: string;    // fecha ISO 8601, inclusive
+}
+
 export interface CreateMovementItemInput {
   productId: string;
   quantity: number;        // entero > 0

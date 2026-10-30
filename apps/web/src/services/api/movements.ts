@@ -1,10 +1,9 @@
 import { http } from './http';
 import type { PaginationParams } from '../../types/pagination';
-import type { CreateMovementInput, Movement, PaginatedMovements } from '../../types/movement';
+import type { CreateMovementInput, Movement, MovementFilters, PaginatedMovements } from '../../types/movement';
 
-// La API acepta search pero lo ignora en movimientos.
 export async function getMovements(
-  params: Omit<PaginationParams, 'search'>,
+  params: Omit<PaginationParams, 'search'> & MovementFilters,
   options: { signal?: AbortSignal } = {},
 ): Promise<PaginatedMovements> {
   const { data } = await http.get<PaginatedMovements>('/movements', { params, signal: options.signal });

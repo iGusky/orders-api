@@ -97,8 +97,18 @@ Body (`CreateProductInput`):
 
 ### `GET /movements`
 
-- `search` se acepta pero **se ignora** (no filtra nada).
-- Orden: más recientes primero (`id desc`). No incluye `items`.
+Filtros opcionales (`MovementFilters`, en `src/types/movement.ts`), además de `page` y `perPage`:
+
+| Param       | Tipo                | Reglas                                                        |
+|-------------|---------------------|---------------------------------------------------------------|
+| `type`      | `MovementType`      | Uno de los cinco tipos                                        |
+| `direction` | `MovementDirection` | Solo cuenta con `type=ADJUSTMENT`; con otro tipo se ignora    |
+| `dateStart` | fecha ISO 8601      | `occurredAt >= dateStart`. Va junto con `dateEnd`             |
+| `dateEnd`   | fecha ISO 8601      | `occurredAt <= dateEnd`. Va junto con `dateStart`             |
+
+- Manda las fechas con hora completa (`toISOString()`): la pantalla usa las 00:00 del día de inicio y las
+  23:59:59.999 del día de fin, en la hora del dispositivo.
+- `search` ya no existe en este endpoint. Orden: más recientes primero (`id desc`). No incluye `items`.
 - Respuesta: `Paginated<Movement>`.
 
 ### `POST /movements`
@@ -204,3 +214,10 @@ ni "compenses" estos comportamientos en la UI sin preguntar; repórtalos.
 5. **`ocurredAt`** (request) vs **`occurredAt`** (response): nombres distintos.
 6. **`direction`** no se rechaza en tipos distintos de `ADJUSTMENT` por el DTO; la base de datos sí lo impide
    (check constraint) y respondería 500. No lo mandes fuera de `ADJUSTMENT`.
+7. **`GET /movements` cuenta sin filtros:** `count()` no recibe el `where`, así que `totalItems` y `totalPages`
+   son los de todos los movimientos aunque haya filtros. La paginación y el "N movimientos con estos filtros" salen mal.
+8. **`GET /movements` sin `type` oculta los ajustes:** el `where` usa `direction: null` siempre que `type` no sea
+   `ADJUSTMENT`, también cuando no hay `type`, así que la lista sin filtros excluye todos los `ADJUSTMENT`.
+9. **`dateStart`/`dateEnd` no se exigen juntos:** `@ValidateIf` + `@IsOptional` deja pasar uno solo. La UI siempre manda
+   los dos. Además `@IsISO8601` acepta fechas sin hora (`2026-10-26`), pero Prisma solo acepta fecha y hora completas
+   y respondería 500.

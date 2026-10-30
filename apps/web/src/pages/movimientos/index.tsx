@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router';
-import { History } from 'lucide-react';
+import { History, ListFilter, SearchX, X } from 'lucide-react';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorPanel } from '../../components/ErrorPanel';
 import { PageHeader } from '../../components/PageHeader';
@@ -10,6 +11,18 @@ import { formatCents } from '../../utils/money';
 import { MOVEMENT_TYPE_META, movementLabel } from '../../utils/movements';
 import { useQuery } from '../../hooks/useQuery';
 import { getMovements } from '../../services/api';
+import { MovementFiltersSheet } from './MovementFiltersSheet';
+import {
+  EMPTY_FILTERS,
+  dateFilterLabel,
+  filtersKey,
+  filtersToParams,
+  hasFilters,
+  parseFilters,
+  toApiFilters,
+  typeFilterLabel,
+  type Filters,
+} from './filters';
 
 const PER_PAGE = 20;
 const PAGE_PARAM = 'pagina';
@@ -116,6 +129,58 @@ function LoadingRows() {
   );
 }
 
+interface FilterChipProps {
+  label: string;
+  onRemove: () => void;
+}
+
+function FilterChip({ label, onRemove }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      aria-label={`Quitar filtro: ${label}`}
+      className="flex min-h-touch shrink-0 items-center gap-2 rounded-full border border-primary bg-primary-soft pr-3 pl-4 font-semibold text-primary active:bg-surface"
+      onClick={onRemove}
+    >
+      {label}
+      <X className="size-5" aria-hidden />
+    </button>
+  );
+}
+
+interface FilterBarProps {
+  filters: Filters;
+  onOpen: () => void;
+  onChange: (filters: Filters) => void;
+}
+
+// Botón para abrir los filtros y, junto a él, los filtros activos; tocar uno lo quita.
+function FilterBar({ filters, onOpen, onChange }: FilterBarProps) {
+  const typeLabel = typeFilterLabel(filters);
+  const dateLabel = dateFilterLabel(filters);
+  const count = (typeLabel ? 1 : 0) + (dateLabel ? 1 : 0);
+  return (
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+      <button
+        type="button"
+        className="flex h-touch shrink-0 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold active:bg-primary-soft"
+        onClick={onOpen}
+      >
+        <ListFilter className="size-5" aria-hidden />
+        Filtrar
+        {count > 0 && (
+          <span className="tabular grid size-6 place-items-center rounded-full bg-primary text-sm text-on-primary">
+            {count}
+            <span className="sr-only">{count === 1 ? ' filtro activo' : ' filtros activos'}</span>
+          </span>
+        )}
+      </button>
+      {typeLabel && <FilterChip label={typeLabel} onRemove={() => onChange({ ...filters, type: null, direction: null })} />}
+      {dateLabel && <FilterChip label={dateLabel} onRemove={() => onChange({ ...filters, from: '', to: '' })} />}
+    </div>
+  );
+}
+
 function parsePage(value: string | null): number {
   const page = Number(value);
   return Number.isInteger(page) && page >= 1 ? page : 1;
@@ -124,21 +189,34 @@ function parsePage(value: string | null): number {
 export function MovementsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = parsePage(searchParams.get(PAGE_PARAM));
-  const { status, data, refetch } = useQuery(`movements:${page}`, (signal) =>
-    getMovements({ page, perPage: PER_PAGE }, { signal }),
+  const filters = parseFilters(searchParams);
+  const filtered = hasFilters(filters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const { status, data, refetch } = useQuery(`movements:${page}:${filtersKey(filters)}`, (signal) =>
+    getMovements({ page, perPage: PER_PAGE, ...toApiFilters(filters) }, { signal }),
   );
 
   const goToPage = (next: number) => {
-    setSearchParams(next === 1 ? {} : { [PAGE_PARAM]: String(next) });
+    setSearchParams({ ...filtersToParams(filters), ...(next === 1 ? {} : { [PAGE_PARAM]: String(next) }) });
     window.scrollTo({ top: 0 });
   };
 
+  // Cambiar los filtros regresa a la primera página
+  const changeFilters = (next: Filters) => {
+    setSearchParams(filtersToParams(next));
+    setFiltersOpen(false);
+  };
+
+  const countLabel = (total: number) => `${total} ${total === 1 ? 'movimiento' : 'movimientos'}`;
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-safe pb-safe md:px-6">
       <PageHeader title="Movimientos">
-        {data && data.totalItems > 0 && `${data.totalItems} ${data.totalItems === 1 ? 'movimiento' : 'movimientos'} en total`}
+        {data && data.totalItems > 0 && (filtered ? `${countLabel(data.totalItems)} con estos filtros` : `${countLabel(data.totalItems)} en total`)}
       </PageHeader>
+
+      <FilterBar filters={filters} onOpen={() => setFiltersOpen(true)} onChange={changeFilters} />
+      <MovementFiltersSheet open={filtersOpen} filters={filters} onApply={changeFilters} onClose={() => setFiltersOpen(false)} />
 
       {status === 'loading' && !data && <LoadingRows />}
 
@@ -146,7 +224,15 @@ export function MovementsPage() {
         <ErrorPanel message="No se pudieron cargar los movimientos. Revisa tu conexión e inténtalo otra vez." onRetry={refetch} />
       )}
 
-      {status !== 'error' && data && data.totalItems === 0 && (
+      {status !== 'error' && data && filtered && page === 1 && data.data.length === 0 && (
+        <EmptyState icon={SearchX} message="No hay movimientos con estos filtros.">
+          <button type="button" onClick={() => changeFilters(EMPTY_FILTERS)} className="h-touch rounded-md border border-line bg-surface px-4 font-semibold active:bg-primary-soft">
+            Quitar filtros
+          </button>
+        </EmptyState>
+      )}
+
+      {status !== 'error' && data && !filtered && data.totalItems === 0 && (
         <EmptyState icon={History} message="Todavía no hay movimientos. Aparecerán aquí cuando registres una venta o agregues stock.">
           <NavLink to="/registrar-venta" className="grid h-touch-lg place-items-center rounded-md bg-primary px-5 text-lg font-semibold text-on-primary active:bg-primary-pressed">
             Registrar venta
@@ -154,7 +240,7 @@ export function MovementsPage() {
         </EmptyState>
       )}
 
-      {status !== 'error' && data && data.totalItems > 0 && data.data.length === 0 && (
+      {status !== 'error' && data && data.data.length === 0 && (filtered ? page > 1 : data.totalItems > 0) && (
         <EmptyState icon={History} message={`La página ${page} no existe.`}>
           <button type="button" onClick={() => goToPage(1)} className="h-touch rounded-md border border-line bg-surface px-4 font-semibold active:bg-primary-soft">
             Ir a la primera página
