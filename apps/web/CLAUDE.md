@@ -61,7 +61,7 @@ src/
     movements.ts        # getMovements, createMovement
     errors.ts           # getApiErrorBody, getDomainError
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
-  utils/money.ts        # pesosToCents, formatCents
+  utils/money.ts        # pesosToCents, parsePesos, formatCents, centsToInput
   utils/dates.ts        # formatTime, formatDay ("Hoy", "Ayer", "Lunes, 26 de octubre"), dayKey
   utils/movements.ts    # Texto e icono de cada tipo de movimiento
   utils/products.ts     # LOW_STOCK_THRESHOLD y stockStatus
@@ -85,6 +85,9 @@ src/
 - La API solo habla en **centavos enteros**. Convierte con `pesosToCents` al enviar y muestra con `formatCents`.
 - Nunca guardes pesos con decimales en el estado que se manda a la API.
 - `lineTotalCents` es el importe **total del renglón**. En una venta se puede sugerir `priceCents * quantity`, pero el usuario lo puede cambiar.
+- En una venta, los descuentos se aplican **por producto**: cada renglón tiene un importe editable que se manda como su
+  `lineTotalCents`, y el total es la suma (I3), no se edita. Cambiar la cantidad de un producto descarta su importe editado
+  y vuelve al precio de lista. Lógica en `pages/registrar-venta/sale.ts`.
 
 ### Movimientos
 - Inmutables (D11): no hay botones de editar ni borrar. Las correcciones son un `ADJUSTMENT` con `direction`.

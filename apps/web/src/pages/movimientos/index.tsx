@@ -148,8 +148,8 @@ export function MovementsPage() {
 
       {status !== 'error' && data && data.totalItems === 0 && (
         <EmptyState icon={History} message="Todavía no hay movimientos. Aparecerán aquí cuando registres una venta o agregues stock.">
-          <NavLink to="/" className="grid h-touch-lg place-items-center rounded-md bg-primary px-5 text-lg font-semibold text-on-primary active:bg-primary-pressed">
-            Ir al inicio
+          <NavLink to="/registrar-venta" className="grid h-touch-lg place-items-center rounded-md bg-primary px-5 text-lg font-semibold text-on-primary active:bg-primary-pressed">
+            Registrar venta
           </NavLink>
         </EmptyState>
       )}

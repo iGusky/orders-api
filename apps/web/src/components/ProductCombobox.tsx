@@ -15,9 +15,12 @@ interface ProductComboboxProps {
   onChange: (product: Product | null) => void;
   error?: string;
   refreshKey?: number;   // cámbialo para volver a cargar las opciones (por ejemplo, después de guardar)
+  placeholder?: string;
+  // Si devuelve un texto, la opción se muestra deshabilitada con ese motivo ("Agotado", "Ya agregaste todo").
+  getDisabledReason?: (product: Product) => string | undefined;
 }
 
-export function ProductCombobox({ label, value, onChange, error, refreshKey = 0 }: ProductComboboxProps) {
+export function ProductCombobox({ label, value, onChange, error, refreshKey = 0, placeholder = 'Busca por nombre', getDisabledReason }: ProductComboboxProps) {
   const id = useId();
   const listId = `${id}-list`;
   const errorId = `${id}-error`;
@@ -55,6 +58,7 @@ export function ProductCombobox({ label, value, onChange, error, refreshKey = 0 
   }, [value]);
 
   const select = (product: Product) => {
+    if (getDisabledReason?.(product)) return;
     onChange(product);
     setOpen(false);
     setQuery('');
@@ -124,7 +128,7 @@ export function ProductCombobox({ label, value, onChange, error, refreshKey = 0 
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
           className="min-w-0 flex-1 bg-transparent py-2 outline-none"
-          placeholder="Busca por nombre"
+          placeholder={placeholder}
           autoComplete="off"
           enterKeyHint="search"
           value={query}
@@ -185,18 +189,14 @@ export function ProductCombobox({ label, value, onChange, error, refreshKey = 0 
             <ul id={listId} role="listbox" aria-label={label} aria-busy={searching} className={`max-h-80 overflow-y-auto ${searching ? 'opacity-60' : ''}`}>
               {options.map((product, index) => (
                 // El teclado se maneja desde el input (patrón aria-activedescendant).
-                <li
+                <ProductOption
                   key={product.id}
                   id={`${id}-option-${product.id}`}
-                  role="option"
-                  aria-selected={index === activeIndex}
-                  className={`flex min-h-touch cursor-pointer items-center gap-3 border-t border-line px-4 py-2 first:border-t-0 active:bg-primary-soft ${index === activeIndex ? 'bg-primary-soft' : ''}`}
-                  onClick={() => select(product)}
-                >
-                  <span className="flex-1">{product.name}</span>
-                  <StockBadge stock={product.stock} />
-                  <span className="tabular text-sm text-ink-muted">{product.stock} en stock</span>
-                </li>
+                  product={product}
+                  active={index === activeIndex}
+                  disabledReason={getDisabledReason?.(product)}
+                  onSelect={() => select(product)}
+                />
               ))}
             </ul>
           )}
@@ -209,5 +209,38 @@ export function ProductCombobox({ label, value, onChange, error, refreshKey = 0 
         </div>
       )}
     </div>
+  );
+}
+
+interface ProductOptionProps {
+  id: string;
+  product: Product;
+  active: boolean;
+  disabledReason?: string;
+  onSelect: () => void;
+}
+
+function ProductOption({ id, product, active, disabledReason, onSelect }: ProductOptionProps) {
+  return (
+    <li
+      id={id}
+      role="option"
+      aria-selected={active}
+      aria-disabled={Boolean(disabledReason)}
+      className={`flex min-h-touch items-center gap-3 border-t border-line px-4 py-2 first:border-t-0 ${
+        disabledReason ? 'text-ink-muted' : 'cursor-pointer active:bg-primary-soft'
+      } ${active ? 'bg-primary-soft' : ''}`}
+      onClick={onSelect}
+    >
+      <span className="flex-1">{product.name}</span>
+      {disabledReason ? (
+        <span className="text-sm">{disabledReason}</span>
+      ) : (
+        <>
+          <StockBadge stock={product.stock} />
+          <span className="tabular text-sm text-ink-muted">{product.stock} en stock</span>
+        </>
+      )}
+    </li>
   );
 }

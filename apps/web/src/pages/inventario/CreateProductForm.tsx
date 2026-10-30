@@ -2,11 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { CircleAlert, Loader2 } from 'lucide-react';
 import { createProduct, getApiErrorBody } from '../../services/api';
 import type { Product } from '../../types/product';
-import { pesosToCents } from '../../utils/money';
+import { MAX_CENTS, parsePesos } from '../../utils/money';
 
-// Límite de la columna Int de PostgreSQL (D15): un valor mayor la API lo rechaza.
-const MAX_PRICE_CENTS = 2_147_483_647;
-const PRICE_PATTERN = /^\d+(\.\d{1,2})?$/;
 
 interface FormErrors {
   name?: string;
@@ -17,10 +14,10 @@ function validate(name: string, price: string): FormErrors {
   const errors: FormErrors = {};
   if (name.trim() === '') errors.name = 'Escribe el nombre del producto.';
 
-  const normalizedPrice = price.replace(/[$,\s]/g, '');
-  if (normalizedPrice === '') errors.price = 'Escribe el precio de lista.';
-  else if (!PRICE_PATTERN.test(normalizedPrice)) errors.price = 'Escribe el precio con números, por ejemplo 45 o 45.50.';
-  else if (pesosToCents(normalizedPrice) > MAX_PRICE_CENTS) errors.price = 'El precio es demasiado alto.';
+  const priceCents = parsePesos(price);
+  if (price.trim() === '') errors.price = 'Escribe el precio de lista.';
+  else if (priceCents === null) errors.price = 'Escribe el precio con números, por ejemplo 45 o 45.50.';
+  else if (priceCents > MAX_CENTS) errors.price = 'El precio es demasiado alto.';
   return errors;
 }
 
@@ -62,7 +59,7 @@ export function CreateProductForm({ onCreated, onCancel }: CreateProductFormProp
       const product = await createProduct({
         name: name.trim(),
         description: description.trim() || undefined,
-        priceCents: pesosToCents(price),
+        priceCents: parsePesos(price) ?? 0,
       });
       onCreated(product);
     } catch (error) {

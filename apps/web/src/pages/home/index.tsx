@@ -27,7 +27,7 @@ export function Home() {
       <h1 className="mt-8 text-2xl">Registro de ventas</h1>
 
       <NavLink
-        to=""
+        to="/registrar-venta"
         end
         className="flex min-h-40 flex-col justify-between rounded-lg bg-primary p-5 text-on-primary active:bg-primary-pressed"
       >

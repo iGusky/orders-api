@@ -8,6 +8,7 @@ import Home from './pages/home';
 import { MovementsPage } from './pages/movimientos';
 import { InventoryPage } from './pages/inventario';
 import { AddStockPage } from './pages/agregar-stock';
+import { SalePage } from './pages/registrar-venta';
 
 // TEMPORAL: guía de estilos, solo en desarrollo. Ver src/pages/estilos/index.tsx para eliminarla.
 const StyleGuide = import.meta.env.DEV ? lazy(() => import('./pages/estilos')) : null;
@@ -24,6 +25,7 @@ root.render(
       <Route path="/movimientos" element={<MovementsPage />}/>
       <Route path="/inventario" element={<InventoryPage />}/>
       <Route path="/agregar-stock" element={<AddStockPage />}/>
+      <Route path="/registrar-venta" element={<SalePage />}/>
       {StyleGuide && (
         <Route path="/estilos" element={<Suspense fallback={null}><StyleGuide /></Suspense>} />
       )}
