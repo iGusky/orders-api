@@ -51,7 +51,10 @@ src/
     Toast.tsx           # Confirmación breve
     SearchField.tsx     # Buscador con espera de 300 ms y botón para borrar
     StockBadge.tsx      # "Quedan n" / "Agotado"
+    ProductCombobox.tsx # Lista desplegable con búsqueda de productos (GET /products, primera página)
+    QuantityStepper.tsx # − cantidad + (el número también se escribe)
   hooks/useQuery.ts     # Carga de datos con cancelación y reintento
+  hooks/useDebouncedValue.ts
   services/api/         # Cliente de la API: una función por endpoint
     http.ts             # Instancia de axios (baseURL = VITE_API_URL)
     products.ts         # getProducts, getProductById, createProduct
