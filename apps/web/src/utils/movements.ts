@@ -15,3 +15,13 @@ export function movementLabel(movement: Movement): string {
   if (movement.type !== 'ADJUSTMENT') return label;
   return movement.direction === 'IN' ? 'Ajuste de entrada' : 'Ajuste de salida';
 }
+
+export function productCountLabel(count: number): string {
+  return `${count} ${count === 1 ? 'producto' : 'productos'}`;
+}
+
+// La dirección se comunica con el signo (docs/styles.md, 6.5). direction solo existe en ADJUSTMENT.
+export function signedQuantity(movement: Movement, quantity: number): string {
+  const addsStock = movement.type === 'RESTOCK' || movement.type === 'RETURN' || movement.direction === 'IN';
+  return `${addsStock ? '+' : '−'}${quantity}`;
+}

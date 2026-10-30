@@ -5,7 +5,7 @@
 > y el diseño en [`apps/api/docs/modelo-de-datos.md`](../../api/docs/modelo-de-datos.md).
 > Si este documento y el código no coinciden, gana el código: actualiza este archivo.
 
-Última revisión contra el código: 2026-10-29
+Última revisión contra el código: 2026-10-30
 
 ---
 
@@ -26,11 +26,10 @@
 | GET    | `/products`       | `getProducts(params)`        | Lista paginada de productos activos         |
 | GET    | `/products/:id`   | `getProductById(id)`         | Un producto activo                          |
 | POST   | `/products`       | `createProduct(input)`       | Alta de producto (stock inicial `0`)        |
-| GET    | `/movements`      | `getMovements(params)`       | Lista paginada de movimientos (sin renglones) |
+| GET    | `/movements`      | `getMovements(params)`       | Lista paginada de movimientos con renglones  |
 | POST   | `/movements`      | `createMovement(input)`      | Registra un movimiento y ajusta el stock    |
 
-No existen (todavía): editar o borrar productos, detalle de un movimiento, consultar los renglones de un movimiento,
-reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
+No existen (todavía): editar o borrar productos, detalle de un movimiento, reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
 
 ---
 
@@ -108,8 +107,21 @@ Filtros opcionales (`MovementFilters`, en `src/types/movement.ts`), además de `
 
 - Manda las fechas con hora completa (`toISOString()`): la pantalla usa las 00:00 del día de inicio y las
   23:59:59.999 del día de fin, en la hora del dispositivo.
-- `search` ya no existe en este endpoint. Orden: más recientes primero (`id desc`). No incluye `items`.
-- Respuesta: `Paginated<Movement>`.
+- `search` ya no existe en este endpoint. Orden: más recientes primero (`id desc`).
+- Respuesta: `Paginated<MovementWithItems>`: cada `Movement` con sus `items` y el nombre del producto de cada renglón.
+
+`MovementItem`:
+
+```json
+{
+  "id": "01a1...",
+  "movementId": "01a1...",
+  "productId": "01a0...",
+  "quantity": 5,
+  "lineTotalCents": 4500,
+  "product": { "name": "Sticker" }
+}
+```
 
 ### `POST /movements`
 

@@ -63,7 +63,7 @@ src/
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
   utils/money.ts        # pesosToCents, parsePesos, formatCents, centsToInput
   utils/dates.ts        # formatTime, formatDay ("Hoy", "Ayer", "Lunes, 26 de octubre"), dayKey
-  utils/movements.ts    # Texto e icono de cada tipo de movimiento
+  utils/movements.ts    # Texto, icono, signo de cantidad y conteo de productos de un movimiento
   utils/products.ts     # LOW_STOCK_THRESHOLD y stockStatus
 ```
 

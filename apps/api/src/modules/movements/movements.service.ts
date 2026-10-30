@@ -52,6 +52,21 @@ export class MovementsService {
             lte: dateEnd
           }
         },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                 name: true,
+                }
+              },
+              
+            },
+            orderBy: {
+              id: "desc"
+            }
+          }
+        },
         orderBy: { id: 'desc' },
         take: perPage,
         skip: itemsToSkip,

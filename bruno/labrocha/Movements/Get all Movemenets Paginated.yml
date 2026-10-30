@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{API_URL}}/movements?page=1&perPage=50&type=RESTOCK&direction=OUT&dateStart=2026-10-26"
+  url: "{{API_URL}}/movements?page=1&perPage=50&type=SALE&direction=OUT&dateStart=2026-10-26T00:00:00z&dateEnd=2026-10-26T23:59:59z"
   params:
     - name: page
       value: "1"
@@ -14,13 +14,16 @@ http:
       value: "50"
       type: query
     - name: type
-      value: RESTOCK
+      value: SALE
       type: query
     - name: direction
       value: OUT
       type: query
     - name: dateStart
-      value: 2026-10-26
+      value: 2026-10-26T00:00:00z
+      type: query
+    - name: dateEnd
+      value: 2026-10-26T23:59:59z
       type: query
   auth: inherit
 

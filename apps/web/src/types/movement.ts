@@ -18,7 +18,19 @@ export type Movement =
   | (MovementBase & { type: 'ADJUSTMENT'; direction: MovementDirection })
   | (MovementBase & { type: Exclude<MovementType, 'ADJUSTMENT'>; direction: null });
 
-export type PaginatedMovements = Paginated<Movement>;
+export interface MovementItem {
+  id: string;              // UUID v7
+  movementId: string;
+  productId: string;
+  quantity: number;        // entero > 0; la dirección la da el tipo del movimiento
+  lineTotalCents: number;  // importe total del renglón; 0 salvo en SALE y RETURN
+  product: { name: string };
+}
+
+// GET /movements incluye los renglones; POST /movements no.
+export type MovementWithItems = Movement & { items: MovementItem[] };
+
+export type PaginatedMovements = Paginated<MovementWithItems>;
 
 // Filtros de GET /movements. direction solo aplica con type ADJUSTMENT; las fechas van juntas y filtran occurredAt.
 export interface MovementFilters {

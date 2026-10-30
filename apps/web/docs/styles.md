@@ -3,7 +3,7 @@
 > Sistema visual del frontend. Los valores viven como tokens en [`src/styles.css`](../src/styles.css) (`@theme` de Tailwind v4);
 > este documento explica **cuándo** usar cada uno. Si cambias un token, actualiza la tabla correspondiente aquí.
 
-Última actualización: 2026-10-29 (paleta terracota)
+Última actualización: 2026-10-30 (detalle de movimientos)
 
 ---
 
@@ -243,8 +243,10 @@ La dirección se comunica con icono y signo, en tinta neutra. Nunca con verde y 
 | `SHRINKAGE`  | `PackageX`            | Merma            | −2       |
 | `ADJUSTMENT` | `SlidersHorizontal`   | Ajuste           | ±n según `direction` |
 
-- Fila: icono, tipo y fecha (`occurredAt`, formato corto "29 oct, 14:30") a la izquierda; importe con `formatCents` a la derecha.
+- Fila: icono, tipo y fecha (`occurredAt`, formato corto "29 oct, 14:30") y número de productos ("3 productos") a la izquierda; importe con `formatCents` a la derecha.
   Si el importe es `0`, no se muestra.
+- Acordeón: toda la fila es tocable, con `ChevronDown` a la derecha que gira al abrir. Debajo se despliegan los renglones
+  (producto, cantidad con signo e importe); solo un movimiento abierto a la vez.
 - Sin botones de editar ni borrar (D11). Para corregir se ofrece "Registrar ajuste".
 
 ### 6.6 Etiqueta kraft (elemento distintivo)

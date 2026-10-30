@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   Boxes,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -18,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { formatCents, pesosToCents } from '../../utils/money';
+import { productCountLabel } from '../../utils/movements';
 
 // Demos escritos a mano para los patrones de docs/styles.md, indexados por número de sección.
 // Si cambias un patrón en el documento, actualiza aquí su demo.
@@ -330,26 +332,59 @@ function ListsDemo() {
 
 // ---------- 6.5 Movimientos ----------
 
-function MovementRow({ icon: Icon, type, date, quantity, amountCents }: { icon: LucideIcon; type: string; date: string; quantity: string; amountCents: number }) {
+interface MovementRowProps {
+  icon: LucideIcon;
+  type: string;
+  date: string;
+  quantity: string;
+  amountCents: number;
+  product: string;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function MovementRow({ icon: Icon, type, date, quantity, amountCents, product, expanded, onToggle }: MovementRowProps) {
   return (
-    <div className="flex min-h-16 items-center gap-3 rounded-md border border-line bg-surface px-4 py-2">
-      <Icon className="size-5 shrink-0 text-ink-muted" aria-hidden />
-      <span className="flex flex-1 flex-col">
-        <span>{type} <span className="tabular font-semibold">{quantity}</span></span>
-        <span className="text-sm text-ink-muted">{date}</span>
-      </span>
-      {amountCents > 0 && <span className="tabular font-semibold">{formatCents(amountCents)}</span>}
+    <div className="rounded-md border border-line bg-surface">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        className="flex min-h-16 w-full items-center gap-3 rounded-md px-4 py-2 text-left active:bg-primary-soft"
+        onClick={onToggle}
+      >
+        <Icon className="size-5 shrink-0 text-ink-muted" aria-hidden />
+        <span className="flex flex-1 flex-col">
+          <span>{type}</span>
+          <span className="tabular flex gap-3 text-sm text-ink-muted">
+            <span>{date}</span>
+            <span>{productCountLabel(1)}</span>
+          </span>
+        </span>
+        {amountCents > 0 && <span className="tabular font-semibold">{formatCents(amountCents)}</span>}
+        <ChevronDown className={`size-5 shrink-0 text-ink-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {expanded && (
+        <div className="flex items-baseline gap-3 border-t border-line px-4 py-3">
+          <span className="flex-1">{product}</span>
+          <span className="tabular min-w-12 text-right">{quantity}</span>
+          <span className="min-w-24 text-right">
+            {amountCents > 0 && <span className="tabular font-semibold">{formatCents(amountCents)}</span>}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
 function MovementsDemo() {
+  const [expanded, setExpanded] = useState<string | null>('venta');
+  const toggle = (id: string) => setExpanded((current) => (current === id ? null : id));
   return (
     <Demo title="Lista de movimientos">
       <div className="flex flex-col gap-3">
-        <MovementRow icon={ShoppingBag} type="Venta" date="29 oct, 14:30" quantity="−5" amountCents={4500} />
-        <MovementRow icon={PackagePlus} type="Reabastecimiento" date="29 oct, 09:10" quantity="+12" amountCents={0} />
-        <MovementRow icon={SlidersHorizontal} type="Ajuste" date="28 oct, 19:45" quantity="+45" amountCents={0} />
+        <MovementRow icon={ShoppingBag} type="Venta" date="29 oct, 14:30" quantity="−5" amountCents={4500} product="Sticker" expanded={expanded === 'venta'} onToggle={() => toggle('venta')} />
+        <MovementRow icon={PackagePlus} type="Reabastecimiento" date="29 oct, 09:10" quantity="+12" amountCents={0} product="Pin esmaltado" expanded={expanded === 'reabastecimiento'} onToggle={() => toggle('reabastecimiento')} />
+        <MovementRow icon={SlidersHorizontal} type="Ajuste" date="28 oct, 19:45" quantity="+45" amountCents={0} product="Llavero de barro" expanded={expanded === 'ajuste'} onToggle={() => toggle('ajuste')} />
       </div>
     </Demo>
   );
