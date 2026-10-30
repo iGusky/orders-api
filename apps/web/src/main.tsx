@@ -5,7 +5,8 @@ import '@fontsource/young-serif';
 import './styles.css'
 import { BrowserRouter, Route, Routes } from 'react-router';
 import Home from './pages/home';
-import { Movimientos } from './pages/movimientos';
+import { MovementsPage } from './pages/movimientos';
+import { InventoryPage } from './pages/inventario';
 
 // TEMPORAL: guía de estilos, solo en desarrollo. Ver src/pages/estilos/index.tsx para eliminarla.
 const StyleGuide = import.meta.env.DEV ? lazy(() => import('./pages/estilos')) : null;
@@ -19,7 +20,8 @@ root.render(
     <BrowserRouter>
     <Routes>
       <Route path="/" element={<Home />}/>
-      <Route path="/movimientos" element={<Movimientos />}/>
+      <Route path="/movimientos" element={<MovementsPage />}/>
+      <Route path="/inventario" element={<InventoryPage />}/>
       {StyleGuide && (
         <Route path="/estilos" element={<Suspense fallback={null}><StyleGuide /></Suspense>} />
       )}

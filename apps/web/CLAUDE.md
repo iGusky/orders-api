@@ -43,6 +43,15 @@ src/
   styles.css            # Tailwind + estilos globales
   pages/<ruta>/index.tsx  # Una carpeta por pantalla
   components/           # Componentes reutilizables entre páginas
+    PageHeader.tsx      # Botón volver + título + texto secundario
+    Pagination.tsx      # Anterior / Página n de m / Siguiente
+    ErrorPanel.tsx      # Error con botón Reintentar
+    EmptyState.tsx      # Estado vacío con icono, frase y acción
+    BottomSheet.tsx     # Hoja inferior (diálogo centrado en iPad)
+    Toast.tsx           # Confirmación breve
+    SearchField.tsx     # Buscador con espera de 300 ms y botón para borrar
+    StockBadge.tsx      # "Quedan n" / "Agotado"
+  hooks/useQuery.ts     # Carga de datos con cancelación y reintento
   services/api/         # Cliente de la API: una función por endpoint
     http.ts             # Instancia de axios (baseURL = VITE_API_URL)
     products.ts         # getProducts, getProductById, createProduct
@@ -50,6 +59,9 @@ src/
     errors.ts           # getApiErrorBody, getDomainError
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
   utils/money.ts        # pesosToCents, formatCents
+  utils/dates.ts        # formatTime, formatDay ("Hoy", "Ayer", "Lunes, 26 de octubre"), dayKey
+  utils/movements.ts    # Texto e icono de cada tipo de movimiento
+  utils/products.ts     # LOW_STOCK_THRESHOLD y stockStatus
 ```
 
 ## Reglas
@@ -61,6 +73,10 @@ src/
 - Los errores se distinguen por `errorCode` (`getDomainError(e)?.errorCode === 'INSUFFICIENT_STOCK'`), nunca por el texto de `message`.
   Los textos que ve el usuario los escribe el frontend.
 - Toda pantalla que llama a la API maneja tres estados: cargando, error y vacío.
+- Para leer datos usa `useQuery(key, (signal) => getX(..., { signal }))` de `src/hooks/useQuery.ts`: cancela la petición
+  anterior y conserva los datos previos mientras carga (atenúa la lista con `opacity-60` en lugar de mostrar el esqueleto otra vez).
+  `key` debe incluir todo lo que cambia la petición.
+- La página actual y la búsqueda de una lista viven en la URL (`?pagina=2&buscar=pin`) para que funcione el botón atrás.
 
 ### Dinero (D4, D15)
 - La API solo habla en **centavos enteros**. Convierte con `pesosToCents` al enviar y muestra con `formatCents`.

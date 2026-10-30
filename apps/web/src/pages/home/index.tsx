@@ -38,7 +38,7 @@ export function Home() {
       <nav aria-label="Secciones" className="flex flex-col gap-3">
         <MenuLink to="" icon={PackagePlus}>Agregar stock</MenuLink>
         <MenuLink to="/movimientos" icon={History}>Movimientos</MenuLink>
-        <MenuLink to="" icon={Boxes}>Inventario</MenuLink>
+        <MenuLink to="/inventario" icon={Boxes}>Inventario</MenuLink>
       </nav>
     </main>
   );
