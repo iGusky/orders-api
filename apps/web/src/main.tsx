@@ -9,9 +9,13 @@ import { MovementsPage } from './pages/movimientos';
 import { InventoryPage } from './pages/inventario';
 import { AddStockPage } from './pages/agregar-stock';
 import { SalePage } from './pages/registrar-venta';
+import { MovementFormPage } from './pages/registrar-movimiento';
+import { initTheme } from './hooks/useTheme';
 
 // TEMPORAL: guía de estilos, solo en desarrollo. Ver src/pages/estilos/index.tsx para eliminarla.
 const StyleGuide = import.meta.env.DEV ? lazy(() => import('./pages/estilos')) : null;
+
+initTheme();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -26,6 +30,7 @@ root.render(
       <Route path="/inventario" element={<InventoryPage />}/>
       <Route path="/agregar-stock" element={<AddStockPage />}/>
       <Route path="/registrar-venta" element={<SalePage />}/>
+      <Route path="/registrar-movimiento" element={<MovementFormPage />}/>
       {StyleGuide && (
         <Route path="/estilos" element={<Suspense fallback={null}><StyleGuide /></Suspense>} />
       )}

@@ -1,4 +1,5 @@
-import { IsIn, IsInt, IsNotEmpty, IsPositive, IsUUID } from "class-validator"
+import { IsIn, IsInt, IsNotEmpty, IsPositive, IsUUID, Max, Min } from "class-validator"
+import { MAX_POSTGRES_POSITIVE_INTEGER } from "../../../common/constants/index.js"
 
 export class CreateMovementItemDto {
     @IsNotEmpty()
@@ -6,10 +7,12 @@ export class CreateMovementItemDto {
     productId!: string
 
     @IsInt()
-    @IsPositive()
+    @Min(1)
+    @Max(MAX_POSTGRES_POSITIVE_INTEGER)
     quantity!: number
 
-    @IsPositive()
     @IsInt()
+    @Min(0)
+    @Max(MAX_POSTGRES_POSITIVE_INTEGER)
     lineTotalCents!: number
 }

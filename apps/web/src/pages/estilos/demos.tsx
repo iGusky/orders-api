@@ -433,7 +433,7 @@ function BottomSheetDemo() {
       <button type="button" className={`${buttonSecondary} w-fit`} onClick={() => setOpen(true)}>Abrir hoja</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
-          <button type="button" className="absolute inset-0 bg-ink/30" aria-label="Cerrar" onClick={() => setOpen(false)} />
+          <button type="button" className="absolute inset-0 bg-scrim/30" aria-label="Cerrar" onClick={() => setOpen(false)} />
           <div
             role="dialog"
             aria-modal="true"

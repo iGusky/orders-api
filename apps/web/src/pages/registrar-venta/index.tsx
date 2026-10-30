@@ -1,13 +1,13 @@
 import { useCallback, useState, type FormEvent } from 'react';
 import { NavLink } from 'react-router';
 import { Check, CircleAlert, Loader2, ShoppingBag } from 'lucide-react';
+import { OccurredAtField, occurredAtError } from '../../components/OccurredAtField';
 import { PageHeader } from '../../components/PageHeader';
 import { ProductCombobox } from '../../components/ProductCombobox';
 import { Toast } from '../../components/Toast';
 import { createMovement, getApiErrorBody, getDomainError, getProductById } from '../../services/api';
 import type { Product } from '../../types/product';
 import { formatCents } from '../../utils/money';
-import { OccurredAtField } from './OccurredAtField';
 import { SaleItemRow } from './SaleItemRow';
 import { SaleTotalTag } from './SaleTotalTag';
 import {
@@ -26,14 +26,6 @@ type Stage = 'idle' | 'checking' | 'saving';
 interface SavedSale {
   pieces: number;
   totalCents: number;
-}
-
-function occurredAtError(value: string | null): string | undefined {
-  if (value === null) return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Elige la fecha y la hora.';
-  if (date.getTime() > Date.now()) return 'La venta no puede ser en el futuro.';
-  return undefined;
 }
 
 function requestErrorMessage(error: unknown): string {
@@ -223,7 +215,7 @@ export function SalePage() {
             <SaleTotalTag pieces={pieces} productCount={items.length} listCents={listCents} totalCents={totalCents} error={totalErr} />
           )}
 
-          <OccurredAtField value={occurredAt} onChange={setOccurredAt} error={dateErr} />
+          <OccurredAtField noun="la venta" value={occurredAt} onChange={setOccurredAt} error={dateErr} />
 
           {/* En celular el error se muestra en la barra fija, junto al botón */}
           {requestError && <RequestError message={requestError} className="hidden md:flex" />}

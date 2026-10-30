@@ -3,7 +3,9 @@
 > **Fuente de verdad** del diseño durante el desarrollo inicial.
 > Si el código y este documento no coinciden, uno de los dos está mal: corrígelo en el mismo commit.
 
-Última actualización: 2026-09-28
+Última actualización: 2026-10-30
+
+> Las secciones 1 a 7 describen el MVP. La segunda fase (tiendas y cuentas de Google) está en la [sección 8](#8-fase-2-tiendas-y-cuentas-de-google).
 
 ---
 
@@ -233,7 +235,7 @@ Reglas que **siempre** deben cumplirse. Cada una debería tener al menos una pru
 - Interpretar texto en lenguaje natural: la API solo recibe JSON estructurado.
 - El frontend (vive en otro repositorio).
 - Ligar una devolución o un ajuste con el movimiento original.
-- Múltiples usuarios, autenticación y multi-tenancy.
+- Múltiples usuarios, autenticación y multi-tenancy (pasan a la fase 2, sección 8).
 
 ## 7. Preguntas abiertas
 
@@ -244,7 +246,8 @@ Reglas que **siempre** deben cumplirse. Cada una debería tener al menos una pru
 ~~**P3. Distinguir venta de merma.**~~ Resuelta en D10.
 
 **P4. Borrado lógico y unicidad.** Si `name` de producto debe ser único, ¿se puede crear
-"Sticker" de nuevo si ya existe uno eliminado con ese nombre?
+"Sticker" de nuevo si ya existe uno eliminado con ese nombre? Con la fase 2, la unicidad sería
+**por tienda**: dos tiendas pueden tener un "Sticker".
 
 ~~**P5. ¿De dónde sale el costo para las mermas?**~~ Resuelta: el MVP no maneja costos; la merma vale `0` (D5).
 
@@ -258,3 +261,173 @@ Reglas que **siempre** deben cumplirse. Cada una debería tener al menos una pru
 en lugar de 45, las unidades están bien pero las ventas del día quedan infladas en $405, y un
 `ADJUSTMENT` no toca dinero. ¿Se acepta para el MVP (la prioridad es el stock), o hace falta una
 forma de corregir importes?
+
+## 8. Fase 2: tiendas y cuentas de Google
+
+> **Estado: diseño, sin implementar.** Lo que dice esta sección todavía no existe en el código y no cuenta como
+> discrepancia. Al implementar cada parte, muévela a las secciones 2 a 5 en el mismo commit.
+
+### 8.1 Objetivo
+
+Pasar de un negocio único a muchos negocios independientes en la misma aplicación:
+
+- Una persona entra con su **cuenta de Google**, sin crear una contraseña.
+- Esa persona registra su **Tienda**, que representa a su negocio (nombre, dirección, teléfono y otros datos).
+- Cada tienda tiene **sus propios productos y movimientos**, y nadie más puede verlos ni modificarlos.
+
+### 8.2 Glosario
+
+| Término (es) | En código | Significado                                                                     |
+|--------------|-----------|---------------------------------------------------------------------------------|
+| **Usuario**  | `User`    | La persona que entra con Google. Es la identidad, no el negocio.                |
+| **Tienda**   | `Store`   | El negocio de esa persona. Es dueña de los productos y movimientos (*tenant*).  |
+| **Dueño**    | `owner`   | El usuario al que pertenece una tienda.                                         |
+
+### 8.3 Entidades
+
+#### User (nueva)
+
+| Campo        | Tipo            | Notas                                                     |
+|--------------|-----------------|-----------------------------------------------------------|
+| `id`         | UUID v7         | PK. Ver D13                                               |
+| `googleSub`  | texto, único    | Identificador de la persona en Google (`sub`). Ver D20    |
+| `email`      | texto           | Copia de Google; se refresca al entrar. No identifica     |
+| `name`       | texto           | Copia de Google                                           |
+| `avatarUrl`  | texto, opcional | Copia de Google                                           |
+| `createdAt`  | fecha-hora      | Lo pone el servidor                                       |
+| `deletedAt`  | fecha, opcional | Borrado lógico (D7). Ver P15                              |
+
+#### Store (nueva)
+
+| Campo          | Tipo            | Notas                                                     |
+|----------------|-----------------|-----------------------------------------------------------|
+| `id`           | UUID v7         | PK. Ver D13                                               |
+| `ownerId`      | UUID v7, único  | FK → User. Ver D16                                        |
+| `name`         | texto           | Nombre del negocio                                        |
+| `address`      | texto           | Ver P13                                                   |
+| `phone`        | texto           | Texto, no número: conserva `+` y ceros a la izquierda     |
+| `description`  | texto, opcional | Propuesta                                                 |
+| `contactEmail` | texto, opcional | Propuesta: el correo del negocio puede no ser el de Google |
+| `timezone`     | texto, opcional | Propuesta: zona IANA. Dejaría listo definir a qué "día" pertenece una venta (sección 6) |
+| `createdAt`    | fecha-hora      | Lo pone el servidor                                       |
+| `deletedAt`    | fecha, opcional | Borrado lógico (D7). Ver P15                              |
+
+#### Cambios en entidades existentes
+
+| Entidad        | Cambio                    | Notas                                     |
+|----------------|---------------------------|-------------------------------------------|
+| `Product`      | `storeId` (FK → Store)    | Obligatorio e inmutable. Ver D17          |
+| `Movement`     | `storeId` (FK → Store)    | Obligatorio e inmutable. Ver D17          |
+| `MovementItem` | Sin cambios               | Hereda la tienda de su movimiento. Ver P14 |
+
+#### Relaciones
+
+```
+User 1 ──── 0..1 Store 1 ──┬── N Product  1 ──── N MovementItem
+                           └── N Movement 1 ──── N MovementItem
+```
+
+### 8.4 Decisiones
+
+**D16. Una persona tiene como máximo una tienda.**
+Por qué: es lo que necesita el negocio hoy.
+Consecuencias:
+- La FK vive en `Store` (`ownerId` único). Permitir varias tiendas después solo requiere quitar la unicidad.
+- Puede existir un usuario sin tienda: es el estado de quien acaba de entrar por primera vez.
+- Empleados o varios usuarios por tienda quedan fuera del alcance (8.8).
+
+**D17. La tienda es el límite de aislamiento: `storeId` en `Product` y `Movement`, con base de datos y esquema compartidos.**
+Por qué: una sola base con una columna discriminadora es lo más simple de operar y migrar, y escala a muchas tiendas pequeñas.
+Consecuencias:
+- El stock y el resto de las reglas (D1 a D15) no cambian: siguen siendo por producto, y cada producto pertenece a una tienda.
+- Toda consulta debe filtrar por `storeId`. Un solo filtro olvidado expone datos de otro negocio, por lo que
+  hace falta una prueba de aislamiento por endpoint (I13).
+- Los índices empiezan por `storeId` (por ejemplo, `storeId` + `occurredAt` en `Movement`).
+
+**D18. El `storeId` sale de la sesión, nunca de lo que envía el cliente.**
+Por qué: un valor que viene en el body, la query o la URL se puede cambiar por el de otra tienda.
+Consecuencias:
+- Los DTOs no incluyen `storeId` y las rutas siguen siendo `/products` y `/movements`.
+- Si `ValidationPipe` no descarta campos desconocidos, hay que asegurarse de que un `storeId` en el body no llegue a Prisma.
+
+**D19. Un recurso de otra tienda responde 404, igual que uno que no existe.**
+Por qué: un 403 confirmaría que ese ID existe.
+Consecuencia: se reutilizan los errores de dominio existentes, como `ProductNotFoundError`.
+
+**D20. Google es el único proveedor de identidad, y la persona se identifica por `sub`, no por correo.**
+Por qué: no guardar contraseñas elimina esa superficie de riesgo. El `sub` no cambia nunca; el correo sí puede cambiar.
+Consecuencias:
+- `googleSub` es la llave para encontrar al usuario. `email`, `name` y `avatarUrl` son copias.
+- Quien no tiene cuenta de Google no puede entrar.
+
+**D21. Google autentica; la sesión es de la API.**
+Por qué: el frontend no es de confianza, así que la API debe comprobar por sí misma quién es la persona.
+Consecuencias:
+- La API verifica el ID token de Google (firma, `aud`, `iss`, `exp`) antes de crear o encontrar al usuario.
+- Después emite su propia sesión; el token de Google no se usa en cada petición.
+- Todo endpoint exige sesión salvo los marcados explícitamente como públicos (autenticación por defecto, no por excepción).
+
+### 8.5 Invariantes
+
+- **I11.** Todo `Product` y `Movement` pertenece a exactamente una tienda, y esa tienda no cambia.
+- **I12.** Todos los productos de un movimiento pertenecen a la misma tienda que el movimiento.
+- **I13.** Ninguna operación lee, cuenta o modifica datos de otra tienda. Incluye totales y conteos de paginación.
+- **I14.** Un usuario es dueño de máximo una tienda activa.
+- **I15.** `User.googleSub` es único.
+
+### 8.6 API propuesta
+
+| Método y ruta       | Qué hace                                                      |
+|---------------------|---------------------------------------------------------------|
+| `POST /auth/google` | Recibe la credencial de Google y crea la sesión (ver P10, P11) |
+| `POST /auth/logout` | Cierra la sesión                                              |
+| `GET /me`           | Usuario actual y su tienda, si tiene. El frontend decide con esto si muestra el alta de tienda |
+| `POST /stores`      | Crea la tienda del usuario. 409 si ya tiene una (I14)         |
+| `GET /stores/me`    | Datos de su tienda                                            |
+| `PATCH /stores/me`  | Edita los datos de su tienda                                  |
+
+- `/products` y `/movements` conservan sus rutas y pasan a exigir sesión y tienda.
+- Un usuario sin tienda que llame a esos endpoints recibe un error de dominio con su propio `errorCode`.
+- Módulos nuevos: `auth`, `users` y `stores`. `products` y `movements` obtienen la tienda de la sesión.
+
+### 8.7 Plan por etapas
+
+1. **Cerrar la deuda del MVP.** Ver "Antes de la fase 2" en [`pendientes.md`](pendientes.md). Multiplicar tiendas
+   también multiplica cualquier error de stock, y el conteo sin filtros se volvería una fuga entre tiendas.
+2. **Autenticación.** `User`, login con Google, sesión y protección por defecto de los endpoints.
+3. **Tienda.** `Store` y los endpoints de 8.6.
+4. **Aislamiento.** `storeId` en `Product` y `Movement`, filtros en todas las consultas y pruebas de I12 e I13. Si se
+   conservan los datos actuales (P12), la migración va en pasos: columna opcional, asignar la tienda, y hacerla obligatoria.
+5. **Frontend** (`apps/web`). Login, alta y edición de la tienda, envío de la sesión en `services/api` y actualización de `docs/api.md`.
+
+### 8.8 Fuera del alcance de esta fase
+
+- Varias tiendas por persona.
+- Empleados, roles o invitaciones a una tienda.
+- Otros métodos de acceso (correo y contraseña, Apple, Facebook).
+- Monedas distintas por tienda.
+- Tienda pública o catálogo visible para clientes.
+
+### 8.9 Preguntas abiertas
+
+**P10. ¿Cómo llega la credencial de Google a la API?** Botón de Google Identity Services, donde el frontend recibe un
+ID token y lo envía a `POST /auth/google`, o *Authorization Code* con PKCE, donde la API hace el intercambio con Google.
+Inclinación: el botón, porque solo necesitamos saber quién es la persona, no acceder a sus datos de Google.
+
+**P11. ¿Cómo es la sesión de la API?** JWT o sesión guardada en base de datos; cookie `httpOnly` o encabezado
+`Authorization`. Depende de cómo se revoca una sesión y de si el frontend y la API se publican en el mismo sitio.
+Inclinación: cookie `httpOnly`, para que el JavaScript de la página no pueda leerla. Exige resolver CSRF y cambiar
+el CORS actual (`origin: "*"` no es compatible con credenciales).
+
+**P12. ¿Se conservan los datos actuales?** Si son de prueba, se puede reiniciar la base. Si son reales, hay que
+asignarlos a la tienda de su dueño: esa persona debe entrar con Google y crear su tienda antes de la etapa 4.
+
+**P13. ¿Cómo se captura la dirección?** Se vende principalmente en bazares, así que puede no existir un local fijo.
+¿Debe ser obligatoria? ¿Basta con un texto o hacen falta campos separados (calle, ciudad, código postal)?
+
+**P14. ¿Quién hace cumplir I12?** El service, o también la base de datos con una FK compuesta `(productId, storeId)`,
+lo que obligaría a guardar `storeId` en `MovementItem`. La segunda opción protege contra bugs, a cambio de desnormalizar.
+
+**P15. ¿Qué pasa al eliminar una cuenta o una tienda?** D7 pide borrado lógico y D11 prohíbe borrar movimientos.
+¿Los datos se conservan para siempre? ¿Qué implica para los datos personales (`email`, `name`, teléfono)?
+¿Se puede crear una tienda nueva después de eliminar la anterior? Afecta cómo se hace cumplir I14 junto con `deletedAt`.

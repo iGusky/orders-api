@@ -215,21 +215,16 @@ Todas las respuestas de error tienen `statusCode` y `message`. Tipos en `src/typ
 El backend lo desarrolla el usuario a mano (ver `apps/api/CLAUDE.md`). **No modifiques `apps/api` desde el frontend**
 ni "compenses" estos comportamientos en la UI sin preguntar; repórtalos.
 
-1. **`lineTotalCents` exige `> 0`** (`@IsPositive`), pero el diseño pide `0` en `RESTOCK`, `SHRINKAGE` y `ADJUSTMENT` (I7).
-   Hoy esa validación **no se ejecuta** porque `items` no tiene `@ValidateNested`, así que `0` pasa. Si se corrige
-   solo la validación anidada, los `RESTOCK` con `0` empezarán a fallar con 400.
-2. **Los renglones no se validan** (falta `@ValidateNested` + `@Type`): `quantity`, `productId` y `lineTotalCents`
+1. **Los renglones no se validan** (falta `@ValidateNested` + `@Type`): `quantity`, `productId` y `lineTotalCents`
    pueden llegar con cualquier valor. La base de datos sí rechaza `quantity <= 0` y `lineTotalCents < 0`, pero
    responde **500**, no 400. Valida en el formulario antes de enviar.
-3. **`RETURN` y `SHRINKAGE` no modifican el stock** todavía (solo `SALE`, `RESTOCK` y `ADJUSTMENT`).
-4. **`totalCents` solo se calcula en `SALE`**; en `RETURN` queda en `0` aunque haya reembolso (contradice D5/D6).
-5. **`ocurredAt`** (request) vs **`occurredAt`** (response): nombres distintos.
-6. **`direction`** no se rechaza en tipos distintos de `ADJUSTMENT` por el DTO; la base de datos sí lo impide
+2. **`ocurredAt`** (request) vs **`occurredAt`** (response): nombres distintos.
+3. **`direction`** no se rechaza en tipos distintos de `ADJUSTMENT` por el DTO; la base de datos sí lo impide
    (check constraint) y respondería 500. No lo mandes fuera de `ADJUSTMENT`.
-7. **`GET /movements` cuenta sin filtros:** `count()` no recibe el `where`, así que `totalItems` y `totalPages`
+4. **`GET /movements` cuenta sin filtros:** `count()` no recibe el `where`, así que `totalItems` y `totalPages`
    son los de todos los movimientos aunque haya filtros. La paginación y el "N movimientos con estos filtros" salen mal.
-8. **`GET /movements` sin `type` oculta los ajustes:** el `where` usa `direction: null` siempre que `type` no sea
+5. **`GET /movements` sin `type` oculta los ajustes:** el `where` usa `direction: null` siempre que `type` no sea
    `ADJUSTMENT`, también cuando no hay `type`, así que la lista sin filtros excluye todos los `ADJUSTMENT`.
-9. **`dateStart`/`dateEnd` no se exigen juntos:** `@ValidateIf` + `@IsOptional` deja pasar uno solo. La UI siempre manda
+6. **`dateStart`/`dateEnd` no se exigen juntos:** `@ValidateIf` + `@IsOptional` deja pasar uno solo. La UI siempre manda
    los dos. Además `@IsISO8601` acepta fechas sin hora (`2026-10-26`), pero Prisma solo acepta fecha y hora completas
    y respondería 500.

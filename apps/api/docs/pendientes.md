@@ -3,9 +3,31 @@
 Puntos que quedaron abiertos en las revisiones de código. Marca cada uno con `[x]` cuando lo resuelvas.
 Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md). Los temas para estudiar están en [`temas-a-investigar.md`](temas-a-investigar.md).
 
-*Última revisión:* 2026-10-25
+*Última revisión:* 2026-10-30
 
 ---
+
+## Antes de la fase 2
+
+Hallazgos al revisar el código para la [fase 2](modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google). También sigue abierto "Leer, verificar y escribir no es seguro con peticiones simultáneas", más abajo.
+
+- [ ] **`RETURN` y `SHRINKAGE` no cambian el stock.**
+  `createAndAppendItem` solo contempla `SALE`, `RESTOCK` y `ADJUSTMENT`, así que una merma registrada deja el stock igual. Rompe I1. D3 pide además que la regla "tipo → dirección efectiva" exista en un solo lugar.
+
+- [ ] **`totalCents` solo se calcula en `SALE`.**
+  En `RETURN` queda en `0` aunque haya reembolso. Contradice D5 y D6, e I3.
+
+- [ ] **El `count` de `getMovemenetsPaginated` ignora los filtros.**
+  `findMany` usa `where`, pero `count()` no, así que `totalItems` y `totalPages` no corresponden a la lista filtrada. Con varias tiendas contaría los movimientos de todas (I13).
+
+- [ ] **Sin filtro de tipo, `GET /movements` oculta los ajustes.**
+  `direction: type == MovementType.ADJUSTMENT ? direction : null` filtra por `direction = null` cuando no llega `type`, y los `ADJUSTMENT` siempre tienen `direction` (I9).
+
+- [ ] **Validar los renglones de `POST /movements`.**
+  Ver "Discrepancias conocidas" en [`../../web/docs/api.md`](../../web/docs/api.md). Al activar la validación anidada, revisar también `lineTotalCents` para no rechazar el `0` que exige I7.
+
+- [ ] **Sustituir `origin: "*"` en el CORS.**
+  No es compatible con cookies o credenciales (P11).
 
 ## Exception filter (`src/common/filters/domain-error.filter.ts`)
 

@@ -5,7 +5,7 @@
 
 /*
  * Tokens de diseño. Documentación: docs/styles.md
- * Para cambiar la paleta, edita solo los valores hex de este bloque.
+ * Para cambiar la paleta, edita solo los valores hex de este bloque y del tema oscuro, abajo.
  * La paleta por defecto de Tailwind está desactivada: usa únicamente estos tokens.
  * `static` emite todas las variables aunque ninguna clase las use (se leen con var() desde TS).
  */
@@ -31,6 +31,8 @@
 
   --color-kraft: #ebdcc0;          /* ocre claro: etiqueta del importe, stock bajo */
   --color-kraft-ink: #715428;
+
+  --color-scrim: #33291f;          /* fondo detrás de las hojas inferiores */
 
   /* ---------- Tipografía ---------- */
   --font-*: initial;
@@ -71,10 +73,41 @@
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Tema oscuro: data-theme lo pone index.html y lo cambia useTheme. Redefine los mismos tokens, los componentes no cambian. */
+@layer theme {
+  :root[data-theme='dark'] {
+    --color-background: #1f1915;
+    --color-surface: #2a231d;
+    --color-line: #463b32;
+    --color-ink: #f1e9e0;
+    --color-ink-muted: #bcae9f;
+
+    --color-primary: #de9478;
+    --color-primary-pressed: #c67d62;
+    --color-primary-soft: #4d3126;
+    --color-on-primary: #2a1a13;
+
+    --color-danger: #efa9b6;
+    --color-danger-soft: #4c2732;
+
+    --color-kraft: #463822;
+    --color-kraft-ink: #e6d0a0;
+
+    --color-scrim: #000000;
+
+    --shadow-float: 0 10px 30px rgb(0 0 0 / 0.5);
+  }
+}
+
 @layer base {
   html {
+    color-scheme: light;  /* controles nativos: selector de fecha, barras de scroll */
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   body {

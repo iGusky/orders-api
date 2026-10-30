@@ -186,6 +186,78 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* decidir cómo comunica `MovementItemService` sus reglas de negocio (I2) a quien lo llame, sea HTTP o un job.
   *Agregado:* 2026-10-25
 
+## Autenticación y multi-tenancy
+
+- [ ] **OAuth 2.0 frente a OpenID Connect.**
+  ¿Qué problema resuelve cada uno? ¿Qué diferencia hay entre un ID token y un access token, y por qué un access token no sirve para demostrar quién es la persona?
+  *Para qué:* entender qué le pide la app a Google (D20, D21).
+  *Agregado:* 2026-10-30
+
+- [ ] **Google Identity Services frente a *Authorization Code* con PKCE.**
+  ¿Quién recibe la credencial en cada flujo? ¿Qué problema resuelve PKCE? ¿Para qué sirven `state` y `nonce`?
+  *Para qué:* resolver P10.
+  *Agregado:* 2026-10-30
+
+- [ ] **Verificar un ID token en el backend.**
+  ¿Qué es un JWT y qué comprueba su firma? ¿Qué es JWKS? ¿Por qué hay que validar `aud`, `iss` y `exp`? ¿Qué hace `google-auth-library`? ¿Por qué se identifica a la persona por `sub` y no por `email`?
+  *Para qué:* implementar D20 y D21 sin confiar en lo que envía el frontend.
+  *Agregado:* 2026-10-30
+
+- [ ] **Sesiones en servidor frente a JWT propios.**
+  ¿Cómo se revoca un JWT antes de que expire? ¿Qué son los *refresh tokens* y su rotación? ¿Qué cuesta consultar una sesión en base de datos en cada petición?
+  *Para qué:* resolver P11.
+  *Agregado:* 2026-10-30
+
+- [ ] **Cookie `httpOnly` frente a `localStorage`; XSS y CSRF.**
+  ¿A qué ataque queda expuesta cada opción? ¿Qué hacen `SameSite`, `Secure` y `httpOnly`? ¿Qué es un sitio frente a un origen?
+  *Para qué:* decidir dónde vive la sesión en el navegador (P11).
+  *Agregado:* 2026-10-30
+
+- [ ] **CORS con credenciales.**
+  ¿Qué protege realmente CORS? ¿Qué es una petición *preflight*? ¿Por qué `Access-Control-Allow-Origin: *` no funciona junto con cookies?
+  *Para qué:* configurar `enableCors` en `main.ts` para el frontend.
+  *Agregado:* 2026-10-30
+
+- [ ] **Guards globales y decoradores propios en Nest.**
+  ¿Cómo se registra un guard con `APP_GUARD`? ¿Cómo un decorador `@Public()` excluye una ruta? ¿Cómo se crea `@CurrentUser()` con `createParamDecorator`? ¿Qué diferencia hay entre autenticación y autorización?
+  *Para qué:* exigir sesión por defecto (D21) y obtener la tienda de la sesión (D18).
+  *Agregado:* 2026-10-30
+
+- [ ] **Estrategias de multi-tenancy.**
+  Comparar columna `tenant_id`, un esquema por tenant y una base por tenant: aislamiento, costo y migraciones. ¿Qué es un *noisy neighbor*?
+  *Para qué:* entender la decisión de D17 y cuándo habría que reconsiderarla.
+  *Agregado:* 2026-10-30
+
+- [ ] **Row Level Security (RLS) de PostgreSQL.**
+  ¿Cómo aplica la base el filtro por tenant aunque la app lo olvide? ¿Cómo se usa con un pool de conexiones y `SET LOCAL`? ¿Cómo se integra con Prisma?
+  *Para qué:* una segunda capa de defensa para I13.
+  *Agregado:* 2026-10-30
+
+- [ ] **IDOR / *Broken Object Level Authorization* (BOLA).**
+  ¿Por qué un UUID difícil de adivinar no sustituye a la autorización? ¿Cuándo conviene responder 404 en lugar de 403? ¿Cómo se prueba que un usuario no alcanza datos ajenos?
+  *Para qué:* D18, D19 e I13.
+  *Agregado:* 2026-10-30
+
+- [ ] **Hacer cumplir el tenant con llaves foráneas compuestas.**
+  ¿Qué es una FK de varias columnas y qué exige de la tabla referenciada? ¿Se puede declarar en Prisma?
+  *Para qué:* resolver P14 (I12).
+  *Agregado:* 2026-10-30
+
+- [ ] **Índices compuestos y orden de columnas.**
+  ¿Por qué importa el orden en `(storeId, occurredAt)`? ¿Qué consultas aprovecha ese índice y cuáles no? ¿Qué es la regla del prefijo izquierdo?
+  *Para qué:* que las consultas por tienda sigan siendo rápidas con muchas tiendas (D17).
+  *Agregado:* 2026-10-30
+
+- [ ] **Índices únicos parciales y borrado lógico.**
+  ¿Qué es `CREATE UNIQUE INDEX ... WHERE "deletedAt" IS NULL`? ¿Se puede declarar en Prisma o va en SQL a mano dentro de la migración?
+  *Para qué:* I14 si se puede crear otra tienda tras eliminar la anterior (P15), y P4 por tienda.
+  *Agregado:* 2026-10-30
+
+- [ ] **Migraciones en varios pasos (*expand and contract*).**
+  ¿Por qué falla agregar una columna `NOT NULL` sin valor por defecto a una tabla con datos? ¿Cómo se hace por pasos sin detener la aplicación?
+  *Para qué:* agregar `storeId` a `Product` y `Movement` conservando los datos (P12).
+  *Agregado:* 2026-10-30
+
 ## TypeScript y tooling
 
 - [ ] **`paths` de `tsconfig` frente a `imports` de `package.json` (subpath imports).**

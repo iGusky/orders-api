@@ -3,7 +3,7 @@
 > Sistema visual del frontend. Los valores viven como tokens en [`src/styles.css`](../src/styles.css) (`@theme` de Tailwind v4);
 > este documento explica **cuándo** usar cada uno. Si cambias un token, actualiza la tabla correspondiente aquí.
 
-Última actualización: 2026-10-30 (detalle de movimientos)
+Última actualización: 2026-10-30 (tema oscuro)
 
 ---
 
@@ -31,29 +31,35 @@ Todo lo demás se mantiene sobrio.
 ## 2. Color
 
 Tokens semánticos: el nombre dice **para qué** sirve el color, no cuál es. Para cambiar la paleta, edita solo los hex en
-`src/styles.css`; ningún componente debe usar un hex directo. La paleta por defecto de Tailwind (`gray-*`, `red-*`, …)
+`src/styles.css`, en sus dos temas; ningún componente debe usar un hex directo. La paleta por defecto de Tailwind (`gray-*`, `red-*`, …)
 está **desactivada**: si una clase como `bg-gray-100` no hace nada, es a propósito.
 
-| Token (`bg-*`, `text-*`, `border-*`) | Hex       | Nombre    | Uso                                                       |
-|--------------------------------------|-----------|-----------|-----------------------------------------------------------|
-| `background`                         | `#eee7df` | Arena     | Fondo de la app                                           |
-| `surface`                            | `#f9f5f0` | Papel     | Tarjetas, filas, inputs, barra de navegación, hojas        |
-| `line`                               | `#dbcfc3` | Arcilla   | Bordes y divisores                                        |
-| `ink`                                | `#33291f` | Carbón    | Texto principal                                           |
-| `ink-muted`                          | `#6e5f54` | Tierra    | Texto secundario, iconos inactivos, *placeholders*        |
-| `primary`                            | `#94523d` | Terracota | Botón principal, selección activa, foco                    |
-| `primary-pressed`                    | `#7a4331` |           | Estado presionado del botón principal                     |
-| `primary-soft`                       | `#f3e2d8` |           | Fondo de elementos seleccionados o presionados (secundarios) |
-| `on-primary`                         | `#f9f5f0` |           | Texto e iconos sobre `primary`                            |
-| `danger`                             | `#7a3341` | Vino      | Errores, stock insuficiente, acciones destructivas         |
-| `danger-soft`                        | `#efd7db` |           | Fondo de avisos de error                                  |
-| `kraft`                              | `#ebdcc0` | Kraft     | Etiqueta del importe, aviso de stock bajo                  |
-| `kraft-ink`                          | `#715428` |           | Texto sobre `kraft` cuando no es `ink`                    |
+| Token (`bg-*`, `text-*`, `border-*`) | Hex       | Hex oscuro | Nombre    | Uso                                                       |
+|--------------------------------------|-----------|------------|-----------|-----------------------------------------------------------|
+| `background`                         | `#eee7df` | `#1f1915` | Arena     | Fondo de la app                                           |
+| `surface`                            | `#f9f5f0` | `#2a231d` | Papel     | Tarjetas, filas, inputs, barra de navegación, hojas        |
+| `line`                               | `#dbcfc3` | `#463b32` | Arcilla   | Bordes y divisores                                        |
+| `ink`                                | `#33291f` | `#f1e9e0` | Carbón    | Texto principal                                           |
+| `ink-muted`                          | `#6e5f54` | `#bcae9f` | Tierra    | Texto secundario, iconos inactivos, *placeholders*        |
+| `primary`                            | `#94523d` | `#de9478` | Terracota | Botón principal, selección activa, foco                    |
+| `primary-pressed`                    | `#7a4331` | `#c67d62` |           | Estado presionado del botón principal                     |
+| `primary-soft`                       | `#f3e2d8` | `#4d3126` |           | Fondo de elementos seleccionados o presionados (secundarios) |
+| `on-primary`                         | `#f9f5f0` | `#2a1a13` |           | Texto e iconos sobre `primary`                            |
+| `danger`                             | `#7a3341` | `#efa9b6` | Vino      | Errores, stock insuficiente, acciones destructivas         |
+| `danger-soft`                        | `#efd7db` | `#4c2732` |           | Fondo de avisos de error                                  |
+| `kraft`                              | `#ebdcc0` | `#463822` | Kraft     | Etiqueta del importe, aviso de stock bajo                  |
+| `kraft-ink`                          | `#715428` | `#e6d0a0` |           | Texto sobre `kraft` cuando no es `ink`                    |
+| `scrim`                              | `#33291f` | `#000000` |           | Fondo detrás de las hojas inferiores (`bg-scrim/30`)      |
 
-Combinaciones verificadas (contraste WCAG AA, ≥ 4.5:1 para texto normal):
+El tema sigue la preferencia del dispositivo hasta que el usuario lo cambia con el botón de Inicio (`ThemeToggle`); esa
+elección se guarda en el dispositivo. `index.html` pone `data-theme` en `<html>` antes de pintar. El tema oscuro redefine los mismos
+tokens, así que los componentes no llevan clases `dark:`. `primary`, `danger` y `kraft-ink` se aclaran para leerse sobre
+fondos oscuros, y `on-primary` pasa a ser oscuro.
+
+Combinaciones verificadas en ambos temas (contraste WCAG AA, ≥ 4.5:1 para texto normal):
 
 - `ink` sobre `background`, `surface` y `kraft`.
-- `ink-muted` sobre `background` y `surface`. Evítalo en `kraft` (4.5:1, justo en el límite): ahí usa `kraft-ink`.
+- `ink-muted` sobre `background` y `surface`. Evítalo en `kraft` (en el tema claro queda justo en el límite): ahí usa `kraft-ink`.
 - `on-primary` sobre `primary` y `primary-pressed`.
 - `primary` sobre `surface` y `primary-soft`.
 - `danger` sobre `surface` y `danger-soft`.
@@ -67,7 +73,7 @@ Reglas:
 - Las ventas **no** son rojas. Que un movimiento reste stock no lo vuelve negativo; la dirección se indica con icono (6.5).
 - `primary` (terracota) y `danger` (vino) son vecinos en el círculo cromático. Para no confundirlos: el error siempre
   lleva `CircleAlert` y texto, y nunca se usa `danger` en un botón sólido; las acciones destructivas son botones secundarios con `text-danger`.
-- No hay modo oscuro por ahora. Si se agrega, se hace redefiniendo estos mismos tokens.
+- Un color que deba verse igual en ambos temas no existe: si `ink` o `surface` no sirven al invertirse, crea un token, como `scrim`.
 
 ---
 
@@ -142,7 +148,7 @@ Un icono de 20 px puede verse pequeño, pero su área tocable debe medir 48 px (
 ### Elevación
 
 - Por defecto todo es **plano**: la jerarquía se hace con `bg-surface` sobre `bg-background` y bordes `border-line`.
-- `shadow-float` es la única sombra y solo se usa en lo que flota sobre el contenido: hojas inferiores, barra de acción
+- `shadow-float` es la única sombra (más densa en el tema oscuro) y solo se usa en lo que flota sobre el contenido: hojas inferiores, barra de acción
   fija y toasts. Tarjetas y filas **no** llevan sombra.
 
 ---
@@ -270,7 +276,7 @@ Resume el movimiento que se está capturando, como la etiqueta de precio amarrad
 
 - Para elegir un producto, confirmar o capturar un renglón sin salir de la pantalla.
 - `rounded-t-xl bg-surface shadow-float pb-safe`, agarradera de 40 × 4 px `bg-line rounded-full` arriba al centro.
-- Fondo detrás: `bg-ink/30` (sin desenfoque). Se cierra tocando el fondo, deslizando hacia abajo o con el botón `X`.
+- Fondo detrás: `bg-scrim/30` (sin desenfoque). Se cierra tocando el fondo, deslizando hacia abajo o con el botón `X`.
 - En iPad se muestra como panel lateral o diálogo centrado (`md:rounded-lg`).
 
 ### 6.8 Navegación

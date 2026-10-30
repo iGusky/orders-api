@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { CircleAlert, ListFilter } from 'lucide-react';
 import { BottomSheet } from '../../components/BottomSheet';
+import { ChoiceChip } from '../../components/ChoiceChip';
 import { MOVEMENT_DIRECTIONS, MOVEMENT_TYPES, type MovementDirection, type MovementType } from '../../types/movement';
 import { MOVEMENT_TYPE_META } from '../../utils/movements';
 import { DIRECTION_LABELS, EMPTY_FILTERS, dateRangeErrors, todayInputValue, type Filters } from './filters';
@@ -10,23 +11,6 @@ interface MovementFiltersSheetProps {
   filters: Filters;
   onApply: (filters: Filters) => void;
   onClose: () => void;
-}
-
-const optionClasses = (selected: boolean) =>
-  `flex min-h-touch items-center gap-2 rounded-full border px-4 font-semibold ${selected ? 'border-primary bg-primary-soft text-primary' : 'border-line bg-surface active:bg-primary-soft'}`;
-
-interface OptionProps {
-  selected: boolean;
-  onSelect: () => void;
-  children: ReactNode;
-}
-
-function Option({ selected, onSelect, children }: OptionProps) {
-  return (
-    <button type="button" aria-pressed={selected} className={optionClasses(selected)} onClick={onSelect}>
-      {children}
-    </button>
-  );
 }
 
 interface DateFieldProps {
@@ -90,14 +74,14 @@ function FiltersForm({ filters, onApply }: Pick<MovementFiltersSheetProps, 'filt
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 font-semibold">Tipo</legend>
         <div className="flex flex-wrap gap-2">
-          <Option selected={draft.type === null} onSelect={() => selectType(null)}>Todos</Option>
+          <ChoiceChip selected={draft.type === null} onSelect={() => selectType(null)}>Todos</ChoiceChip>
           {MOVEMENT_TYPES.map((type) => {
             const { label, icon: Icon } = MOVEMENT_TYPE_META[type];
             return (
-              <Option key={type} selected={draft.type === type} onSelect={() => selectType(type)}>
+              <ChoiceChip key={type} selected={draft.type === type} onSelect={() => selectType(type)}>
                 <Icon className="size-5" aria-hidden />
                 {label}
-              </Option>
+              </ChoiceChip>
             );
           })}
         </div>
@@ -107,11 +91,11 @@ function FiltersForm({ filters, onApply }: Pick<MovementFiltersSheetProps, 'filt
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 font-semibold">Dirección del ajuste</legend>
           <div className="flex gap-2 *:flex-1 *:justify-center">
-            <Option selected={draft.direction === null} onSelect={() => selectDirection(null)}>Ambas</Option>
+            <ChoiceChip selected={draft.direction === null} onSelect={() => selectDirection(null)}>Ambas</ChoiceChip>
             {MOVEMENT_DIRECTIONS.map((direction) => (
-              <Option key={direction} selected={draft.direction === direction} onSelect={() => selectDirection(direction)}>
+              <ChoiceChip key={direction} selected={draft.direction === direction} onSelect={() => selectDirection(direction)}>
                 {DIRECTION_LABELS[direction]}
-              </Option>
+              </ChoiceChip>
             ))}
           </div>
         </fieldset>

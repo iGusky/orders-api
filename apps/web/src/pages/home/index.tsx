@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
-import { Boxes, ChevronRight, History, PackagePlus, ShoppingBag, type LucideIcon } from 'lucide-react';
+import { Boxes, ChevronRight, History, PackagePlus, ShoppingBag, SlidersHorizontal, type LucideIcon } from 'lucide-react';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 interface MenuLinkProps {
   to: string;
@@ -24,7 +25,10 @@ function MenuLink({ to, icon: Icon, children }: MenuLinkProps) {
 export function Home() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pt-safe pb-safe">
-      <h1 className="mt-8 text-2xl">Registro de ventas</h1>
+      <header className="mt-8 flex items-center justify-between gap-3">
+        <h1 className="text-2xl">Registro de ventas</h1>
+        <ThemeToggle />
+      </header>
 
       <NavLink
         to="/registrar-venta"
@@ -37,6 +41,7 @@ export function Home() {
 
       <nav aria-label="Secciones" className="flex flex-col gap-3">
         <MenuLink to="/agregar-stock" icon={PackagePlus}>Agregar stock</MenuLink>
+        <MenuLink to="/registrar-movimiento" icon={SlidersHorizontal}>Devolución, merma o ajuste</MenuLink>
         <MenuLink to="/movimientos" icon={History}>Movimientos</MenuLink>
         <MenuLink to="/inventario" icon={Boxes}>Inventario</MenuLink>
       </nav>

@@ -67,7 +67,8 @@ export function TableBlock({ header, rows }: { header: string[]; rows: string[][
 
 const ColorPreview: Preview = (row) => {
   const token = codeSpans(row[0])[0];
-  const documented = codeSpans(row[1])[0]?.toLowerCase();
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const documented = codeSpans(row[dark ? 2 : 1])[0]?.toLowerCase();
   const actual = cssVar(`--color-${token}`).toLowerCase();
   return (
     <div className="flex items-center gap-2">

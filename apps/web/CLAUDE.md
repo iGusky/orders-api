@@ -53,8 +53,13 @@ src/
     StockBadge.tsx      # "Quedan n" / "Agotado"
     ProductCombobox.tsx # Lista desplegable con búsqueda de productos (GET /products, primera página)
     QuantityStepper.tsx # − cantidad + (el número también se escribe)
+    OccurredAtField.tsx # Ahora / Otro momento, para fechar un movimiento
+    ChoiceChip.tsx      # Opción en forma de píldora dentro de un grupo
+    FieldError.tsx      # Error bajo un campo, con icono
+    ThemeToggle.tsx     # Botón para alternar entre tema claro y oscuro
   hooks/useQuery.ts     # Carga de datos con cancelación y reintento
   hooks/useDebouncedValue.ts
+  hooks/useTheme.ts     # Tema claro/oscuro: lo aplica, lo guarda y sigue al dispositivo si no hay elección
   services/api/         # Cliente de la API: una función por endpoint
     http.ts             # Instancia de axios (baseURL = VITE_API_URL)
     products.ts         # getProducts, getProductById, createProduct
@@ -91,6 +96,8 @@ src/
 
 ### Movimientos
 - Inmutables (D11): no hay botones de editar ni borrar. Las correcciones son un `ADJUSTMENT` con `direction`.
+- `/registrar-movimiento` captura devoluciones, mermas y ajustes. Solo la devolución lleva dinero: cada renglón pide el
+  reembolso, sin sugerirlo, y el total es la suma (I3). En merma y ajustes `lineTotalCents` va en `0` (D5, I7).
 - Manda `direction` solo en `ADJUSTMENT`. `quantity` siempre positiva. Valida los renglones en el formulario:
   la API todavía no lo hace (ver "Discrepancias conocidas" en `docs/api.md`).
 

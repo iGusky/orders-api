@@ -1,4 +1,5 @@
-import { CircleAlert, RotateCcw, Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
+import { FieldError } from '../../components/FieldError';
 import { QuantityStepper } from '../../components/QuantityStepper';
 import { centsToInput, formatCents } from '../../utils/money';
 import { listSubtotalCents, type SaleItem } from './sale';
@@ -10,15 +11,6 @@ interface SaleItemRowProps {
   onQuantityChange: (quantity: string) => void;
   onLineTotalChange: (lineTotal: string | null) => void;   // null = volver al precio de lista
   onRemove: () => void;
-}
-
-function FieldError({ id, message }: { id: string; message: string }) {
-  return (
-    <span id={id} className="flex items-center gap-1 text-sm text-danger">
-      <CircleAlert className="size-4 shrink-0" aria-hidden />
-      {message}
-    </span>
-  );
 }
 
 export function SaleItemRow({ item, quantityError, lineTotalError, onQuantityChange, onLineTotalChange, onRemove }: SaleItemRowProps) {

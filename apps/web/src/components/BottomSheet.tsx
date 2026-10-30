@@ -34,7 +34,7 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6">
-      <button type="button" className="absolute inset-0 bg-ink/30" aria-label="Cerrar" onClick={onClose} />
+      <button type="button" className="absolute inset-0 bg-scrim/30" aria-label="Cerrar" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
