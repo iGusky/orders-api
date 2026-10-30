@@ -1,11 +1,11 @@
 import { useEffect } from "react"
-import axios from "../../services/axios"
+import { getMovements } from "../../services/api"
 export function Movimientos() {
 
     const fetchMovements = async () => {
         try {
             console.log('hola')
-            const response = await axios.get("/movements?page=1&perPage=50")
+            const response = await getMovements({ page: 1, perPage: 50 })
             console.log(response)
         } catch(e) {
 

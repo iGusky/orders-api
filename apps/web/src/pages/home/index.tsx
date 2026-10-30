@@ -1,32 +1,47 @@
-import { NavLink } from "react-router";
+import { NavLink } from 'react-router';
+import { Boxes, ChevronRight, History, PackagePlus, ShoppingBag, type LucideIcon } from 'lucide-react';
+
+interface MenuLinkProps {
+  to: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+}
+
+function MenuLink({ to, icon: Icon, children }: MenuLinkProps) {
+  return (
+    <NavLink
+      to={to}
+      end
+      className="flex min-h-16 items-center gap-4 rounded-md border border-line bg-surface px-4 text-lg active:bg-primary-soft"
+    >
+      <Icon className="size-6 shrink-0 text-ink-muted" aria-hidden />
+      <span className="flex-1">{children}</span>
+      <ChevronRight className="size-5 text-ink-muted" aria-hidden />
+    </NavLink>
+  );
+}
 
 export function Home() {
-
-  const MenuButton = ({ children, to }: { children: React.ReactNode, to: string }) => {
-
-    return (
-      <NavLink 
-        className="border border-gray-300 h-100 cursor-pointer rounded-md font-bold text-lg uppercase text-center flex flex-col justify-center"
-        to={to}
-        end
-      >
-        {children}
-      </NavLink>
-    )
-  }
   return (
-    <div className="">
-      <h1 className="text-xl font-light m-4">Registro de ventas</h1>
-      <div className="grid grid-cols-2 grid-rows-2 gap-2">
-        <MenuButton to="" >Registrar venta</MenuButton>
-        <MenuButton to="" >Agregar stock</MenuButton>
-        <MenuButton to="/movimientos" >Movimientos</MenuButton>
-        <MenuButton to="" >Inventario</MenuButton>
-      </div>
-    </div>
+    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pt-safe pb-safe">
+      <h1 className="mt-8 text-2xl">Registro de ventas</h1>
+
+      <NavLink
+        to=""
+        end
+        className="flex min-h-40 flex-col justify-between rounded-lg bg-primary p-5 text-on-primary active:bg-primary-pressed"
+      >
+        <ShoppingBag className="size-8" aria-hidden />
+        <span className="font-display text-xl">Registrar venta</span>
+      </NavLink>
+
+      <nav aria-label="Secciones" className="flex flex-col gap-3">
+        <MenuLink to="" icon={PackagePlus}>Agregar stock</MenuLink>
+        <MenuLink to="/movimientos" icon={History}>Movimientos</MenuLink>
+        <MenuLink to="" icon={Boxes}>Inventario</MenuLink>
+      </nav>
+    </main>
   );
 }
 
 export default Home;
-
-

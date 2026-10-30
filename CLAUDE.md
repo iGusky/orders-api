@@ -22,3 +22,8 @@
 
 
 <!-- nx configuration end-->
+# Proyectos del monorepo
+
+- `apps/api` (`orders-api`): API REST en NestJS. **Modo tutor**: no escribas lógica de negocio; sigue `apps/api/CLAUDE.md`.
+- `apps/web` (`web`): frontend en React. **Aquí sí se desarrolla con agentes**; sigue `apps/web/CLAUDE.md`.
+  El contrato de la API para el frontend está en `apps/web/docs/api.md`.

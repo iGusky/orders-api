@@ -10,6 +10,14 @@ export default defineConfig(() => ({
   server:{
     port: 4200,
     host: 'localhost',
+    // Para `pnpm dev:lan`: el iPad no ve el localhost de esta máquina, así que la app llama a /api
+    // y Vite reenvía la petición a la API local.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
   preview:{
     port: 4300,

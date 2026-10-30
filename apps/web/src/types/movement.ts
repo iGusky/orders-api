@@ -19,3 +19,14 @@ export type Movement =
   | (MovementBase & { type: Exclude<MovementType, 'ADJUSTMENT'>; direction: null });
 
 export type PaginatedMovements = Paginated<Movement>;
+
+export interface CreateMovementItemInput {
+  productId: string;
+  quantity: number;        // entero > 0
+  lineTotalCents: number;  // importe total del renglón; 0 salvo en SALE y RETURN
+}
+
+// Body de POST /movements. Ojo: el request usa "ocurredAt" y la respuesta "occurredAt".
+export type CreateMovementInput =
+  | { type: 'ADJUSTMENT'; direction: MovementDirection; items: CreateMovementItemInput[]; ocurredAt?: string }
+  | { type: Exclude<MovementType, 'ADJUSTMENT'>; items: CreateMovementItemInput[]; ocurredAt?: string };

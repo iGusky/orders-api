@@ -1,6 +1,124 @@
-/* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
-body {
-    width: 100dvw;
-    height: 100dvh;
+
+/* TEMPORAL: genera las clases citadas en la guía para la pantalla /estilos. Quitar junto con src/pages/estilos. */
+@source "../docs/styles.md";
+
+/*
+ * Tokens de diseño. Documentación: docs/styles.md
+ * Para cambiar la paleta, edita solo los valores hex de este bloque.
+ * La paleta por defecto de Tailwind está desactivada: usa únicamente estos tokens.
+ * `static` emite todas las variables aunque ninguna clase las use (se leen con var() desde TS).
+ */
+@theme static {
+  /* ---------- Color ---------- */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-background: #eee7df;     /* arena: fondo de la app */
+  --color-surface: #f9f5f0;        /* papel: tarjetas, inputs, barras */
+  --color-line: #dbcfc3;           /* arcilla: bordes y divisores */
+  --color-ink: #33291f;            /* carbón: texto principal */
+  --color-ink-muted: #6e5f54;      /* tierra: texto secundario, iconos inactivos */
+
+  --color-primary: #94523d;        /* terracota: acción principal, selección */
+  --color-primary-pressed: #7a4331;
+  --color-primary-soft: #f3e2d8;
+  --color-on-primary: #f9f5f0;
+
+  --color-danger: #7a3341;         /* vino: errores y stock insuficiente */
+  --color-danger-soft: #efd7db;
+
+  --color-kraft: #ebdcc0;          /* ocre claro: etiqueta del importe, stock bajo */
+  --color-kraft-ink: #715428;
+
+  /* ---------- Tipografía ---------- */
+  --font-*: initial;
+  --font-sans: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+  --font-display: "Young Serif", Georgia, serif;
+
+  --text-*: initial;
+  --text-sm: 0.875rem;             /* 14px: ayudas, metadatos */
+  --text-sm--line-height: 1.4;
+  --text-base: 1.0625rem;          /* 17px: texto e inputs (>=16px evita el zoom de iOS) */
+  --text-base--line-height: 1.5;
+  --text-lg: 1.25rem;              /* 20px: nombres de producto, botones grandes */
+  --text-lg--line-height: 1.35;
+  --text-xl: 1.5rem;               /* 24px: título de pantalla */
+  --text-xl--line-height: 1.25;
+  --text-2xl: 2rem;                /* 32px: título de inicio */
+  --text-2xl--line-height: 1.15;
+  --text-amount: 2.75rem;          /* 44px: importe de la etiqueta */
+  --text-amount--line-height: 1;
+
+  /* ---------- Forma ---------- */
+  --radius-*: initial;
+  --radius-sm: 0.5rem;             /* 8px: chips internos, badges */
+  --radius-md: 0.875rem;           /* 14px: botones e inputs */
+  --radius-lg: 1.25rem;            /* 20px: paneles y tarjetas */
+  --radius-xl: 1.75rem;            /* 28px: esquinas superiores de hojas inferiores */
+  --radius-full: 9999px;           /* botones de icono, steppers */
+
+  --shadow-*: initial;
+  --shadow-float: 0 10px 30px rgb(47 43 38 / 0.14);  /* solo elementos flotantes */
+
+  /* ---------- Tacto ---------- */
+  --spacing-touch: 3rem;           /* 48px: alto mínimo de cualquier objetivo táctil */
+  --spacing-touch-lg: 3.5rem;      /* 56px: acción principal, steppers */
+  --spacing-nav: 4.5rem;           /* 72px: barra de navegación inferior */
+
+  /* ---------- Movimiento ---------- */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    overscroll-behavior-y: none;
+  }
+
+  /* Elimina el retraso de doble toque en controles */
+  a, button, input, select, textarea, label, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
 }
