@@ -1,14 +1,14 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseFilters } from '@nestjs/common';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/CreateProductDto.js';
-import { IndexParamsDto } from '../../common/models/IndexParamsDto.js';
+import { IndexProductsDto } from './dto/IndexProductsPaginated.js';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly service: ProductsService) {}
 
   @Get()
-  async getIndex(@Query() params: IndexParamsDto) {
+  async getIndex(@Query() params: IndexProductsDto) {
     return this.service.getAllProductsPaginated(params);
   }
 

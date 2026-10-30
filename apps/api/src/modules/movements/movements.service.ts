@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service.js';
 import { CreateMovementDto } from './dto/CreateMovementDto.js';
 import { MovementItemService } from './movementItems.service.js';
-import { IndexParamsDto } from '../../common/models/IndexParamsDto.js';
+import { IndexMovementsPaginated } from './dto/IndexMovementsPaginated.js';
 import { MovementType } from '../../../generated/prisma/enums.js';
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -40,11 +39,19 @@ export class MovementsService {
   
   }
 
-  async getMovemenetsPaginated({ perPage, page, search }: IndexParamsDto) {
+  async getMovemenetsPaginated({ perPage, page, type, direction, dateStart, dateEnd }: IndexMovementsPaginated) {
     const itemsToSkip = perPage * (page - 1);
 
     const [movements, totalItems] = await Promise.all([
       this.txHost.tx.movement.findMany({
+        where: {
+          type,
+          direction: type == MovementType.ADJUSTMENT ? direction : null,
+          occurredAt: {
+            gte: dateStart,
+            lte: dateEnd
+          }
+        },
         orderBy: { id: 'desc' },
         take: perPage,
         skip: itemsToSkip,

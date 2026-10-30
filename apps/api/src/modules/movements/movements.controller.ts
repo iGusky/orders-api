@@ -1,7 +1,7 @@
 import { Body, Controller, Get,  Post, Query, UseFilters } from "@nestjs/common";
 import { CreateMovementDto } from "./dto/CreateMovementDto.js";
 import { MovementsService } from "./movements.service.js";
-import { IndexParamsDto } from "../../common/models/IndexParamsDto.js";
+import { IndexMovementsPaginated } from "./dto/IndexMovementsPaginated.js";
 @Controller('movements')
 export class MovementsController {
     constructor(private readonly service: MovementsService) {}
@@ -16,7 +16,7 @@ export class MovementsController {
     }
 
     @Get()
-    async getMovementsIndex(@Query() params: IndexParamsDto) {
+    async getMovementsIndex(@Query() params: IndexMovementsPaginated) {
         return await this.service.getMovemenetsPaginated(params);
     }
 }
