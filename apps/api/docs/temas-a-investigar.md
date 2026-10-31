@@ -38,7 +38,7 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* D7 y D11 (borrado lógico y movimientos inmutables).
   *Agregado:* 2026-09-29
 
-- [ ] **Migraciones: no editar las que ya se aplicaron; `migrate dev --create-only`.**
+- [x] **Migraciones: no editar las que ya se aplicaron; `migrate dev --create-only`.**
   ¿Qué hace Prisma si modificas una migración que ya se aplicó (checksum)? ¿Cómo se crea una migración vacía para escribir SQL a mano?
   *Para qué:* agregar `CHECK constraints` sin romper el historial de migraciones.
   *Agregado:* 2026-09-29
@@ -53,7 +53,7 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* recalcular el stock desde los movimientos y verificar I1.
   *Agregado:* 2026-09-28
 
-- [ ] **Paginación por offset frente a paginación por cursor (keyset).**
+- [x] **Paginación por offset frente a paginación por cursor (keyset).**
   ¿Qué hace PostgreSQL con `OFFSET 100000`? ¿Por qué paginar sin `ORDER BY` da resultados repetidos o faltantes entre páginas? ¿Cómo funciona `cursor` en Prisma?
   *Para qué:* `GET /products` paginado pensando en escala. Los UUID v7 (D13) se pueden ordenar por tiempo.
   *Agregado:* 2026-10-08
@@ -110,6 +110,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Qué pasa si una transacción bloquea el producto A y luego el B, y otra al mismo tiempo bloquea B y luego A? ¿Qué hace PostgreSQL cuando lo detecta (error `40P01`)? ¿Por qué ordenar las actualizaciones (por ejemplo, por `productId`) lo evita? ¿Cuándo conviene reintentar la transacción?
   *Para qué:* un movimiento con varios items actualiza el `stock` de varios productos en la misma transacción (D2, I2).
   *Agregado:* 2026-10-24
+
+- [ ] **Advisory locks de PostgreSQL y serializar por tienda.**
+  ¿Qué hace `pg_advisory_xact_lock` y en qué se diferencia de un bloqueo de fila? Si cada transacción toma un solo lock por tienda, ¿por qué no puede formarse un deadlock entre ellas? ¿Cuánto rendimiento se pierde? Comparar con una cola con un solo consumidor por tienda.
+  *Para qué:* alternativa a ordenar los bloqueos cuando un movimiento toca varios productos (D2, I2, D17).
+  *Agregado:* 2026-10-30
 
 - [ ] **Conciliar una caché con su fuente de verdad.**
   ¿Cómo detectar que `Product.stock` ya no coincide con la suma de los movimientos? ¿Conviene un endpoint o job que recalcule y compare? ¿Qué son los *snapshots* en *event sourcing* y en qué se parecen a `stock`?

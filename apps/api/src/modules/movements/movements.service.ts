@@ -5,6 +5,7 @@ import { IndexMovementsPaginated } from './dto/IndexMovementsPaginated.js';
 import { MovementType } from '../../../generated/prisma/enums.js';
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { CreateMovementItemDto } from './dto/CreateMovementItemDto.js';
 
 @Injectable()
 export class MovementsService {
@@ -32,6 +33,12 @@ export class MovementsService {
       },
     });
 
+    data.items.sort((a: CreateMovementItemDto,b: CreateMovementItemDto) => {
+      if( a.productId < b.productId ) return -1
+      if( a.productId > b.productId ) return 1
+      return 0
+    })
+
     for (const item of data.items) {
       await this.movementItermsService.createAndAppendItem(item, movement);
     }
@@ -46,17 +53,20 @@ export class MovementsService {
     dateStart,
     dateEnd,
   }: IndexMovementsPaginated) {
+    
     const itemsToSkip = perPage * (page - 1);
+    const where = {
+      type,
+      direction: type == MovementType.ADJUSTMENT ? direction : undefined,
+      occurredAt: {
+        gte: dateStart,
+        lte: dateEnd,
+      },
+    };
+
     const [movements, totalItems] = await Promise.all([
       this.txHost.tx.movement.findMany({
-        where: {
-          type,
-          direction: type == MovementType.ADJUSTMENT ? direction : undefined,
-          occurredAt: {
-            gte: dateStart,
-            lte: dateEnd,
-          },
-        },
+        where,
         include: {
           items: {
             include: {
@@ -75,7 +85,9 @@ export class MovementsService {
         take: perPage,
         skip: itemsToSkip,
       }),
-      this.txHost.tx.movement.count(),
+      this.txHost.tx.movement.count({
+        where,
+      })
     ]);
 
     return {

@@ -11,16 +11,16 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
 
 Hallazgos al revisar el código para la [fase 2](modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google). También sigue abierto "Leer, verificar y escribir no es seguro con peticiones simultáneas", más abajo.
 
-- [ ] **`RETURN` y `SHRINKAGE` no cambian el stock.**
+- [x] **`RETURN` y `SHRINKAGE` no cambian el stock.**
   `createAndAppendItem` solo contempla `SALE`, `RESTOCK` y `ADJUSTMENT`, así que una merma registrada deja el stock igual. Rompe I1. D3 pide además que la regla "tipo → dirección efectiva" exista en un solo lugar.
 
-- [ ] **`totalCents` solo se calcula en `SALE`.**
+- [x] **`totalCents` solo se calcula en `SALE`.**
   En `RETURN` queda en `0` aunque haya reembolso. Contradice D5 y D6, e I3.
 
-- [ ] **El `count` de `getMovemenetsPaginated` ignora los filtros.**
+- [x] **El `count` de `getMovemenetsPaginated` ignora los filtros.**
   `findMany` usa `where`, pero `count()` no, así que `totalItems` y `totalPages` no corresponden a la lista filtrada. Con varias tiendas contaría los movimientos de todas (I13).
 
-- [ ] **Sin filtro de tipo, `GET /movements` oculta los ajustes.**
+- [x] **Sin filtro de tipo, `GET /movements` oculta los ajustes.**
   `direction: type == MovementType.ADJUSTMENT ? direction : null` filtra por `direction = null` cuando no llega `type`, y los `ADJUSTMENT` siempre tienen `direction` (I9).
 
 - [ ] **Validar los renglones de `POST /movements`.**
@@ -84,10 +84,10 @@ Hallazgos al revisar el código para la [fase 2](modelo-de-datos.md#8-fase-2-tie
 - [ ] **La traducción `code` → status HTTP vive en el filter, no en las clases de error.**
   El dominio no conoce HTTP. Cuándo reconsiderarlo: si la tabla crece mucho, mapear por categoría semántica (`NotFound`, `Conflict`, `RuleViolation`) en lugar de por código.
 
-- [ ] **409 para stock insuficiente.**
+- [x] **409 para stock insuficiente.**
   Anotar por qué 409 y no 422.
 
 ## Para pensar
 
-- [ ] **¿El `message` de los errores es para el usuario final o para el desarrollador del frontend?**
+- [x] **¿El `message` de los errores es para el usuario final o para el desarrollador del frontend?**
   Si el frontend arma sus propios textos a partir de `code`, el mensaje puede ser técnico. Influye en el idioma y el tono de los mensajes.
