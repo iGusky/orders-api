@@ -1,0 +1,10 @@
+model Product {
+  id String @id @db.Uuid @default(uuid(7))
+  name String
+  description String?
+  priceCents Int
+  stock Int @default(0)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  movementItems MovementItem[]
+}
