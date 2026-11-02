@@ -5,7 +5,7 @@
 > y el diseño en [`apps/api/docs/modelo-de-datos.md`](../../api/docs/modelo-de-datos.md).
 > Si este documento y el código no coinciden, gana el código: actualiza este archivo.
 
-Última revisión contra el código: 2026-10-30
+Última revisión contra el código: 2026-11-02
 
 ---
 
@@ -102,8 +102,8 @@ Filtros opcionales (`MovementFilters`, en `src/types/movement.ts`), además de `
 |-------------|---------------------|---------------------------------------------------------------|
 | `type`      | `MovementType`      | Uno de los cinco tipos                                        |
 | `direction` | `MovementDirection` | Solo cuenta con `type=ADJUSTMENT`; con otro tipo se ignora    |
-| `dateStart` | fecha ISO 8601      | `occurredAt >= dateStart`. Va junto con `dateEnd`             |
-| `dateEnd`   | fecha ISO 8601      | `occurredAt <= dateEnd`. Va junto con `dateStart`             |
+| `dateStart` | fecha ISO 8601      | `occurredAt >= dateStart`. Sin `dateEnd` responde **400**     |
+| `dateEnd`   | fecha ISO 8601      | `occurredAt <= dateEnd`. Sin `dateStart` responde **400**     |
 
 - Manda las fechas con hora completa (`toISOString()`): la pantalla usa las 00:00 del día de inicio y las
   23:59:59.999 del día de fin, en la hora del dispositivo.
@@ -132,15 +132,18 @@ Body (`CreateMovementInput`):
 | `type`      | `MovementType`              | sí                      | `RESTOCK`, `SALE`, `RETURN`, `SHRINKAGE`, `ADJUSTMENT` |
 | `direction` | `IN` \| `OUT`               | solo en `ADJUSTMENT`    | Omitir en los demás tipos (I9)           |
 | `items`     | `CreateMovementItemInput[]` | sí, al menos uno        |                                          |
-| `ocurredAt` | string ISO 8601             | no                      | **Ojo al nombre:** el request usa `ocurredAt` (una "c"), la respuesta usa `occurredAt`. Si se omite, la API usa la fecha actual |
+| `occurredAt` | string ISO 8601 con hora   | no                      | Si se omite, la API usa la fecha actual  |
 
 `CreateMovementItemInput`:
 
 | Campo            | Tipo   | Notas                                         |
 |------------------|--------|-----------------------------------------------|
 | `productId`      | UUID   | Producto activo                               |
-| `quantity`       | entero | `> 0`, siempre positivo; la dirección la da el tipo |
-| `lineTotalCents` | entero | Importe **total** del renglón, no unitario (D5) |
+| `quantity`       | entero | `1..2147483647`, siempre positivo; la dirección la da el tipo |
+| `lineTotalCents` | entero | `0..2147483647`. Importe **total** del renglón, no unitario (D5) |
+
+Cada renglón se valida: si uno no cumple, la API responde **400** con la ruta del campo en `message`
+(`items.1.quantity must not be less than 1`).
 
 Respuesta: el `Movement` creado (sin `items`):
 
@@ -215,16 +218,13 @@ Todas las respuestas de error tienen `statusCode` y `message`. Tipos en `src/typ
 El backend lo desarrolla el usuario a mano (ver `apps/api/CLAUDE.md`). **No modifiques `apps/api` desde el frontend**
 ni "compenses" estos comportamientos en la UI sin preguntar; repórtalos.
 
-1. **Los renglones no se validan** (falta `@ValidateNested` + `@Type`): `quantity`, `productId` y `lineTotalCents`
-   pueden llegar con cualquier valor. La base de datos sí rechaza `quantity <= 0` y `lineTotalCents < 0`, pero
-   responde **500**, no 400. Valida en el formulario antes de enviar.
-2. **`ocurredAt`** (request) vs **`occurredAt`** (response): nombres distintos.
-3. **`direction`** no se rechaza en tipos distintos de `ADJUSTMENT` por el DTO; la base de datos sí lo impide
+1. **`items` no se valida como arreglo con al menos un renglón:** falta `@IsArray` + `@ArrayNotEmpty` (`@IsNotEmpty` no
+   rechaza `[]`). `items: []` pasa la validación y crea un movimiento sin renglones con `totalCents: 0`; un objeto suelto
+   en lugar de un arreglo también pasa y truena en el servicio con **500**. No mandes el formulario sin renglones.
+2. **`direction`** no se rechaza en tipos distintos de `ADJUSTMENT` por el DTO; la base de datos sí lo impide
    (check constraint) y respondería 500. No lo mandes fuera de `ADJUSTMENT`.
-4. **`GET /movements` cuenta sin filtros:** `count()` no recibe el `where`, así que `totalItems` y `totalPages`
-   son los de todos los movimientos aunque haya filtros. La paginación y el "N movimientos con estos filtros" salen mal.
-5. **`GET /movements` sin `type` oculta los ajustes:** el `where` usa `direction: null` siempre que `type` no sea
-   `ADJUSTMENT`, también cuando no hay `type`, así que la lista sin filtros excluye todos los `ADJUSTMENT`.
-6. **`dateStart`/`dateEnd` no se exigen juntos:** `@ValidateIf` + `@IsOptional` deja pasar uno solo. La UI siempre manda
-   los dos. Además `@IsISO8601` acepta fechas sin hora (`2026-10-26`), pero Prisma solo acepta fecha y hora completas
-   y respondería 500.
+3. **I7 no se valida:** en `RESTOCK`, `SHRINKAGE` y `ADJUSTMENT` la API acepta `lineTotalCents > 0`. Lo guarda en el
+   renglón, pero `totalCents` queda en `0`, lo que también rompe I3. Manda siempre `0` en esos tipos.
+4. **Fechas sin hora completa:** `@IsISO8601` acepta `2026-10-26` y `2026-10-26T10:00:00` (sin zona horaria), pero
+   Prisma solo acepta fecha y hora con zona, así que `GET /movements` responde 500 en lugar de 400. `occurredAt` en
+   `POST /movements` pasa la misma validación. Manda siempre `toISOString()`.

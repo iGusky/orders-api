@@ -17,12 +17,10 @@ export class IndexMovementsPaginated {
     direction!: MovementDirectionType
 
     @ValidateIf(o => o.dateEnd != null)
-    @IsOptional()
     @IsISO8601()
     dateStart!: Date
 
     @ValidateIf(o => o.dateStart != null)
-    @IsOptional()
     @IsISO8601()
     dateEnd!: Date
 

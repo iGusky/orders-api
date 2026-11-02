@@ -1,6 +1,7 @@
-import { IsDate, IsEnum, IsISO8601, IsNotEmpty, IsOptional, IsString, ValidateIf } from "class-validator";
+import { IsDate, IsEnum, IsISO8601, IsNotEmpty, IsOptional, IsString, ValidateIf, ValidateNested } from "class-validator";
 import { MovementDirectionType, MovementType } from "../../../../generated/prisma/enums.js";
 import { CreateMovementItemDto } from "./CreateMovementItemDto.js";
+import { Type } from "class-transformer";
 
 export class CreateMovementDto {
 
@@ -16,9 +17,11 @@ export class CreateMovementDto {
     direction!: MovementDirectionType
 
     @IsNotEmpty()
+    @ValidateNested()
+    @Type(() => CreateMovementItemDto)
     items!: CreateMovementItemDto[]
 
     @IsISO8601()
     @IsOptional()
-    ocurredAt!: Date
+    occurredAt!: Date
 }

@@ -29,7 +29,7 @@ export class MovementsService {
         type: data.type,
         direction: data.direction,
         totalCents: totalCents,
-        occurredAt: data.ocurredAt ?? new Date(),
+        occurredAt: data.occurredAt ?? new Date(),
       },
     });
 

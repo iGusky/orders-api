@@ -46,7 +46,7 @@ export interface CreateMovementItemInput {
   lineTotalCents: number;  // importe total del renglón; 0 salvo en SALE y RETURN
 }
 
-// Body de POST /movements. Ojo: el request usa "ocurredAt" y la respuesta "occurredAt".
+// Body de POST /movements.
 export type CreateMovementInput =
-  | { type: 'ADJUSTMENT'; direction: MovementDirection; items: CreateMovementItemInput[]; ocurredAt?: string }
-  | { type: Exclude<MovementType, 'ADJUSTMENT'>; items: CreateMovementItemInput[]; ocurredAt?: string };
+  | { type: 'ADJUSTMENT'; direction: MovementDirection; items: CreateMovementItemInput[]; occurredAt?: string }
+  | { type: Exclude<MovementType, 'ADJUSTMENT'>; items: CreateMovementItemInput[]; occurredAt?: string };

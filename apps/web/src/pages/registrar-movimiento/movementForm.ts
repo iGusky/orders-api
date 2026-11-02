@@ -121,7 +121,7 @@ export function toMovementInput(kind: MovementKind, items: MovementFormItem[], o
     quantity: quantityOf(item),
     lineTotalCents: isRefund(kind) ? parsePesos(item.refund) ?? 0 : 0,
   }));
-  const base = { items: movementItems, ...(occurredAt ? { ocurredAt: new Date(occurredAt).toISOString() } : {}) };
+  const base = { items: movementItems, ...(occurredAt ? { occurredAt: new Date(occurredAt).toISOString() } : {}) };
   if (kind === 'ADJUSTMENT_IN' || kind === 'ADJUSTMENT_OUT') {
     return { type: 'ADJUSTMENT', direction: kind === 'ADJUSTMENT_IN' ? 'IN' : 'OUT', ...base };
   }

@@ -98,8 +98,9 @@ src/
 - Inmutables (D11): no hay botones de editar ni borrar. Las correcciones son un `ADJUSTMENT` con `direction`.
 - `/registrar-movimiento` captura devoluciones, mermas y ajustes. Solo la devolución lleva dinero: cada renglón pide el
   reembolso, sin sugerirlo, y el total es la suma (I3). En merma y ajustes `lineTotalCents` va en `0` (D5, I7).
-- Manda `direction` solo en `ADJUSTMENT`. `quantity` siempre positiva. Valida los renglones en el formulario:
-  la API todavía no lo hace (ver "Discrepancias conocidas" en `docs/api.md`).
+- Manda `direction` solo en `ADJUSTMENT`. `quantity` siempre positiva. Valida los renglones en el formulario para
+  mostrar el error en su campo: la API también los rechaza, pero con un 400 genérico para el usuario. Hay reglas que la
+  API todavía no aplica (ver "Discrepancias conocidas" en `docs/api.md`).
 
 ### Idioma
 - Código en **inglés** (componentes, funciones, variables, tipos, archivos nuevos).

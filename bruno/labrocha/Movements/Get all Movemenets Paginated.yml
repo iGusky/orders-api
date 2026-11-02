@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{API_URL}}/movements?page=1&perPage=50&type=SALE&direction=OUT&dateStart=2026-10-26T00:00:00z&dateEnd=2026-10-26T23:59:59z"
+  url: "{{API_URL}}/movements?page=1&perPage=50&dateStart=2026-10-26T00:00:00z&dateEnd=2026-10-26T23:59:59z"
   params:
     - name: page
       value: "1"
@@ -16,9 +16,11 @@ http:
     - name: type
       value: SALE
       type: query
+      disabled: true
     - name: direction
       value: OUT
       type: query
+      disabled: true
     - name: dateStart
       value: 2026-10-26T00:00:00z
       type: query

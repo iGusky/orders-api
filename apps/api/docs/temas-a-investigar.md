@@ -7,26 +7,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
 
 ## Base de datos y Prisma
 
-- [x] **`CHECK constraint` en Prisma.**
-  ¿Se puede declarar en `schema.prisma` o hay que agregarlo a mano en la migración SQL?
-  *Para qué:* hacer cumplir I9 (`direction` obligatorio solo en `ADJUSTMENT`) desde la base de datos.
-  *Agregado:* 2026-09-28
-
-- [x] **Límite de `Int` para dinero en centavos.**
-  ¿Cuántos pesos caben en un entero de 32 bits? ¿Cuándo conviene `BigInt`?
-  *Para qué:* D4 (dinero en centavos) pensando en escala.
-  *Agregado:* 2026-09-28
-
 - [] **Cómo guarda Prisma los `DateTime`.**
   ¿En qué zona horaria se almacenan? ¿Qué pasa al leerlos?
   *Para qué:* D8 (`occurredAt` / `createdAt`). La zona horaria está fuera del MVP, pero Prisma ya decide algo.
   En PostgreSQL, comparar `timestamp` con `timestamptz` (`@db.Timestamptz`).
   *Agregado:* 2026-09-28
-
-- [x] **`@db.Uuid` frente a `String` en PostgreSQL.**
-  ¿Qué tipo de columna crea Prisma para un `String` con `uuid(7)`? ¿Cuánto ocupa `text` frente al tipo nativo `uuid`?
-  *Para qué:* D13 (IDs UUID v7), y el tamaño de los índices a escala.
-  *Agregado:* 2026-09-29
 
 - [ ] **Índices en llaves foráneas en PostgreSQL.**
   ¿PostgreSQL crea un índice automáticamente para una FK? ¿Y Prisma? ¿Qué es `@@index`?
@@ -38,11 +23,6 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* D7 y D11 (borrado lógico y movimientos inmutables).
   *Agregado:* 2026-09-29
 
-- [x] **Migraciones: no editar las que ya se aplicaron; `migrate dev --create-only`.**
-  ¿Qué hace Prisma si modificas una migración que ya se aplicó (checksum)? ¿Cómo se crea una migración vacía para escribir SQL a mano?
-  *Para qué:* agregar `CHECK constraints` sin romper el historial de migraciones.
-  *Agregado:* 2026-09-29
-
 - [ ] **Lógica de tres valores en SQL (`NULL`) y `CHECK`.**
   ¿Qué pasa si la expresión de un `CHECK` da `NULL` en lugar de `FALSE`? ¿Por qué `x = NULL` no funciona y hay que usar `IS NULL`?
   *Para qué:* escribir bien el constraint de I9 y cualquier `CHECK` sobre columnas opcionales.
@@ -52,11 +32,6 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Cómo sumar cantidades con signo según el `type`? ¿Se puede con la API de Prisma o requiere SQL crudo?
   *Para qué:* recalcular el stock desde los movimientos y verificar I1.
   *Agregado:* 2026-09-28
-
-- [x] **Paginación por offset frente a paginación por cursor (keyset).**
-  ¿Qué hace PostgreSQL con `OFFSET 100000`? ¿Por qué paginar sin `ORDER BY` da resultados repetidos o faltantes entre páginas? ¿Cómo funciona `cursor` en Prisma?
-  *Para qué:* `GET /products` paginado pensando en escala. Los UUID v7 (D13) se pueden ordenar por tiempo.
-  *Agregado:* 2026-10-08
 
 - [ ] **Búsqueda parcial (`contains` / `ILIKE '%x%'`) e índices.**
   ¿Puede un índice B-tree acelerar un `ILIKE` con comodín al inicio? ¿Qué son la extensión `pg_trgm` y los índices GIN? ¿Cuándo conviene la búsqueda de texto completo (`tsvector`)?

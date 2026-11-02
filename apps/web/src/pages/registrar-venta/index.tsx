@@ -130,7 +130,7 @@ export function SalePage() {
       await createMovement({
         type: 'SALE',
         items: toMovementItems(items),
-        ...(occurredAt ? { ocurredAt: new Date(occurredAt).toISOString() } : {}),
+        ...(occurredAt ? { occurredAt: new Date(occurredAt).toISOString() } : {}),
       });
       setLastSaved({ pieces, totalCents });
       setToast('Venta registrada');
