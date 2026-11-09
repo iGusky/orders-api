@@ -1,10 +1,14 @@
 model Product {
-  id String @id @db.Uuid @default(uuid(7))
-  name String
-  description String?
-  priceCents Int
-  stock Int @default(0)
-  createdAt DateTime @default(now())
-  deletedAt DateTime?
+  id            String         @id @default(uuid(7)) @db.Uuid
+  name          String
+  description   String?
+  priceCents    Int
+  stock         Int            @default(0)
+  createdAt     DateTime       @default(now())
+  deletedAt     DateTime?
   movementItems MovementItem[]
+  storeId       String         @db.Uuid
+  store         Store          @relation(fields: [storeId], references: [id])
+
+  @@index([storeId])
 }

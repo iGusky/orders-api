@@ -57,14 +57,22 @@ src/
     ChoiceChip.tsx      # Opción en forma de píldora dentro de un grupo
     FieldError.tsx      # Error bajo un campo, con icono
     ThemeToggle.tsx     # Botón para alternar entre tema claro y oscuro
+    GoogleSignInButton.tsx # Botón de Google Identity Services; entrega el ID token
+    SignOutButton.tsx   # Botón de icono para cerrar sesión
+  auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
+    AuthContext.ts      # AuthState, useAuth, useCurrentUser
+    AuthProvider.tsx    # Carga GET /me, signIn, signOut; un 401 en cualquier petición pasa a "sin sesión"
+    RequireAuth.tsx     # Ruta de layout: sin sesión redirige a /iniciar-sesion y luego regresa
   hooks/useQuery.ts     # Carga de datos con cancelación y reintento
   hooks/useDebouncedValue.ts
   hooks/useTheme.ts     # Tema claro/oscuro: lo aplica, lo guarda y sigue al dispositivo si no hay elección
   services/api/         # Cliente de la API: una función por endpoint
-    http.ts             # Instancia de axios (baseURL = VITE_API_URL)
+    http.ts             # Instancia de axios (baseURL = VITE_API_URL, withCredentials) y aviso de 401
     products.ts         # getProducts, getProductById, createProduct
     movements.ts        # getMovements, createMovement
+    auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized
     errors.ts           # getApiErrorBody, getDomainError
+  services/googleIdentity.ts # Carga el script de Google Identity Services (solo en /iniciar-sesion)
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
   utils/money.ts        # pesosToCents, parsePesos, formatCents, centsToInput
   utils/dates.ts        # formatTime, formatDay ("Hoy", "Ayer", "Lunes, 26 de octubre"), dayKey
@@ -84,6 +92,8 @@ src/
 - Para leer datos usa `useQuery(key, (signal) => getX(..., { signal }))` de `src/hooks/useQuery.ts`: cancela la petición
   anterior y conserva los datos previos mientras carga (atenúa la lista con `opacity-60` en lugar de mostrar el esqueleto otra vez).
   `key` debe incluir todo lo que cambia la petición.
+- Toda pantalla nueva va dentro de `<Route element={<RequireAuth />}>` en `main.tsx`, salvo que sea pública a
+  propósito (hoy solo `/iniciar-sesion`). Dentro de esas pantallas, la persona se lee con `useCurrentUser()`.
 - La página actual y la búsqueda de una lista viven en la URL (`?pagina=2&buscar=pin`) para que funcione el botón atrás.
 
 ### Dinero (D4, D15)

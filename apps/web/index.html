@@ -12,6 +12,7 @@
       document.documentElement.dataset.theme =
         localStorage.getItem('theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     </script>
+    <!-- El script de Google Identity Services se carga solo en /iniciar-sesion (src/services/googleIdentity.ts). -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   </head>
   <body>

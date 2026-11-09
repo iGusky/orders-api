@@ -312,6 +312,21 @@ Pasar de un negocio único a muchos negocios independientes en la misma aplicaci
 | `createdAt`    | fecha-hora      | Lo pone el servidor                                       |
 | `deletedAt`    | fecha, opcional | Borrado lógico (D7). Ver P15                              |
 
+#### Session (nueva)
+
+Una fila por inicio de sesión: la misma persona puede tener varias (celular, laptop). Ver D24.
+
+| Campo        | Tipo                | Notas                                                                 |
+|--------------|---------------------|-----------------------------------------------------------------------|
+| `id`         | UUID v7             | PK. Ver D13. **No es el token**: nunca sale de la API                 |
+| `tokenHash`  | texto, único        | Hash (SHA-256) del valor de la cookie. El token en claro no se guarda |
+| `userId`     | UUID v7             | FK → User, con índice                                                 |
+| `createdAt`  | fecha-hora          | Lo pone el servidor                                                   |
+| `expiresAt`  | fecha-hora          | Después de esta fecha la sesión no sirve, aunque no se haya revocado  |
+| `revokedAt`  | fecha, opcional     | Logout o revocación. Una sesión revocada no vuelve a ser válida       |
+| `lastUsedAt` | fecha, opcional     | Propuesta: para extender `expiresAt` con el uso (expiración deslizante) |
+| `userAgent`  | texto, opcional     | Propuesta: para mostrar "dispositivos activos". Dato personal (P15)   |
+
 #### Cambios en entidades existentes
 
 | Entidad        | Cambio                    | Notas                                     |
@@ -324,7 +339,8 @@ Pasar de un negocio único a muchos negocios independientes en la misma aplicaci
 
 ```
 User 1 ──── 0..1 Store 1 ──┬── N Product  1 ──── N MovementItem
-                           └── N Movement 1 ──── N MovementItem
+     │                     └── N Movement 1 ──── N MovementItem
+     └──── N Session
 ```
 
 ### 8.4 Decisiones
@@ -367,6 +383,50 @@ Consecuencias:
 - Después emite su propia sesión; el token de Google no se usa en cada petición.
 - Todo endpoint exige sesión salvo los marcados explícitamente como públicos (autenticación por defecto, no por excepción).
 
+**D22. La sesión de la API viaja en una cookie `httpOnly`.**
+Por qué: el JavaScript de la página no puede leer una cookie `httpOnly`, así que un ataque XSS no puede robar la
+sesión y usarla desde otro lado. Un token en `localStorage` o en memoria sí se puede leer y enviar a un tercero.
+Consecuencias:
+- Atributos de la cookie: `HttpOnly`, `Secure` (HTTPS; en desarrollo local se relaja), `SameSite=Lax` o `Strict`,
+  `Path=/` y una expiración explícita. Sin `Domain`, salvo que haga falta compartirla entre subdominios.
+- El frontend nunca guarda ni lee la sesión: envía sus peticiones con credenciales (`withCredentials: true`) y
+  pregunta a `GET /me` quién es la persona.
+- CORS: `origin` deja de ser `"*"` y pasa a ser una lista explícita de orígenes, con `credentials: true`.
+- El navegador manda la cookie solo, por lo que la API queda expuesta a CSRF. `SameSite` es la primera defensa; para
+  las peticiones que cambian datos hace falta una segunda (revisar el encabezado `Origin` o un token CSRF). Pendiente decidir cuál.
+- Frontend y API deben publicarse en el mismo **sitio** (por ejemplo, `app.dominio.com` y `api.dominio.com`). Si
+  quedan en sitios distintos, la cookie necesitaría `SameSite=None` y se pierde esa defensa.
+  Plan de despliegue: subdominios distintos de un dominio propio, que cuentan como el mismo sitio. No sirven los
+  subdominios de un hosting compartido (`*.vercel.app`, `*.onrender.com`): están en la *Public Suffix List* y cada uno
+  es un sitio distinto. En desarrollo, `localhost:4200` y `localhost:3000` también son el mismo sitio (el puerto no cuenta).
+- La cookie se emite sin `Domain`, así que solo la recibe el host de la API (*host-only*). El frontend no necesita leerla.
+- `POST /auth/logout` borra la cookie e invalida la sesión en el servidor (D24).
+- La cookie lleva un token opaco de una sesión guardada en base de datos (D24).
+
+**D23. La credencial de Google llega con el botón de Google Identity Services (ID token).**
+Por qué: solo hace falta saber quién es la persona (OpenID Connect), no acceder a sus datos de Google, así que no se
+necesita el flujo *Authorization Code* ni guardar tokens de Google.
+Consecuencias:
+- El frontend muestra el botón, recibe el ID token y lo envía a `POST /auth/google`. La API lo verifica (D21).
+- Solo se usa el **Client ID**: el frontend lo necesita para el botón y la API para validar `aud`. Es público.
+- El **client secret no se usa**. No va en el frontend ni en el repo; si en el futuro se cambia a *Authorization Code*,
+  vive solo en las variables de entorno de la API.
+- En Google Cloud, los orígenes de JavaScript autorizados deben incluir el del frontend (desarrollo y producción).
+- Registro e inicio de sesión son la misma operación: buscar por `googleSub` y crear si no existe (I15).
+
+**D24. La sesión se guarda en base de datos (`Session`); la cookie lleva un token opaco.**
+Por qué: una sesión en el servidor se puede revocar al instante (logout, usuario eliminado, cuenta comprometida),
+y un JWT no. El ahorro de un JWT (no consultar la base) no aplica: el guard ya lee al usuario y su tienda en cada
+petición (D18). Separa la sesión de la autenticación: Google prueba quién es la persona una vez (D21); la sesión es de la API.
+Consecuencias:
+- El token sale de un generador criptográfico (`crypto.randomBytes`), no de un UUID. Se envía en la cookie y en la
+  base se guarda solo su hash (`tokenHash`): si se filtra la tabla, no se pueden usar las sesiones.
+- `User` no guarda nada de la sesión: una persona puede tener varias sesiones activas, una por dispositivo.
+- Una sesión es válida si existe su `tokenHash`, `revokedAt` es `null`, `expiresAt` es futura y el usuario no está eliminado.
+- Logout revoca **esa** sesión. Revocar todas las de un usuario es un `UPDATE` por `userId`.
+- Excepción a D7: `Session` no lleva `deletedAt`. No es un dato de negocio, y las filas vencidas o revocadas se
+  pueden borrar físicamente (ver P16).
+
 ### 8.5 Invariantes
 
 - **I11.** Todo `Product` y `Movement` pertenece a exactamente una tienda, y esa tienda no cambia.
@@ -379,7 +439,7 @@ Consecuencias:
 
 | Método y ruta       | Qué hace                                                      |
 |---------------------|---------------------------------------------------------------|
-| `POST /auth/google` | Recibe la credencial de Google y crea la sesión (ver P10, P11) |
+| `POST /auth/google` | Recibe la credencial de Google, crea la sesión y pone la cookie. Responde **204** sin body; el frontend llama después a `GET /me` (ver D22, D23, D24) |
 | `POST /auth/logout` | Cierra la sesión                                              |
 | `GET /me`           | Usuario actual y su tienda, si tiene. El frontend decide con esto si muestra el alta de tienda |
 | `POST /stores`      | Crea la tienda del usuario. 409 si ya tiene una (I14)         |
@@ -410,17 +470,16 @@ Consecuencias:
 
 ### 8.9 Preguntas abiertas
 
-**P10. ¿Cómo llega la credencial de Google a la API?** Botón de Google Identity Services, donde el frontend recibe un
-ID token y lo envía a `POST /auth/google`, o *Authorization Code* con PKCE, donde la API hace el intercambio con Google.
-Inclinación: el botón, porque solo necesitamos saber quién es la persona, no acceder a sus datos de Google.
+~~**P10. ¿Cómo llega la credencial de Google a la API?**~~ Resuelta en D23 (botón de Google Identity Services).
 
-**P11. ¿Cómo es la sesión de la API?** JWT o sesión guardada en base de datos; cookie `httpOnly` o encabezado
-`Authorization`. Depende de cómo se revoca una sesión y de si el frontend y la API se publican en el mismo sitio.
-Inclinación: cookie `httpOnly`, para que el JavaScript de la página no pueda leerla. Exige resolver CSRF y cambiar
-el CORS actual (`origin: "*"` no es compatible con credenciales).
+~~**P11. ¿Cómo es la sesión de la API?**~~ Resuelta en D22 (cookie `httpOnly`) y D24 (sesión en base de datos).
 
-**P12. ¿Se conservan los datos actuales?** Si son de prueba, se puede reiniciar la base. Si son reales, hay que
-asignarlos a la tienda de su dueño: esa persona debe entrar con Google y crear su tienda antes de la etapa 4.
+**P16. ¿Cuánto dura una sesión y qué se hace con las vencidas?** ¿Expiración fija (por ejemplo, 30 días) o
+deslizante (se extiende con el uso, con un tope absoluto)? Usarla desde el celular en un bazar pide que no caduque
+seguido. ¿Quién borra las filas vencidas o revocadas, y cada cuánto?
+
+~~**P12. ¿Se conservan los datos actuales?**~~ Resuelta (2026-11-04): son datos de prueba. Se reinicia la base y
+`storeId` entra como obligatorio desde la primera migración de la fase 2, sin migración por pasos.
 
 **P13. ¿Cómo se captura la dirección?** Se vende principalmente en bazares, así que puede no existir un local fijo.
 ¿Debe ser obligatoria? ¿Basta con un texto o hacen falta campos separados (calle, ciudad, código postal)?

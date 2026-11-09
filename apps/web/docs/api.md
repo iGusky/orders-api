@@ -12,7 +12,8 @@
 ## Generalidades
 
 - **Base URL:** `import.meta.env.VITE_API_URL` (definida en `apps/web/.env`). La API escucha en el puerto `3000` por defecto.
-- **Formato:** JSON en request y response. Sin autenticación. CORS abierto (`*`).
+- **Formato:** JSON en request y response. Hoy la API no exige sesión y su CORS está abierto (`*`); ver
+  "Sesión (fase 2)" más abajo para lo que el frontend ya espera.
 - **IDs:** UUID v7 (`string`).
 - **Fechas:** strings ISO 8601 en las respuestas (JSON no tiene tipo `Date`).
 - **Dinero:** siempre **entero en centavos**, con sufijo `Cents`. La API nunca convierte a pesos;
@@ -30,6 +31,60 @@
 | POST   | `/movements`      | `createMovement(input)`      | Registra un movimiento y ajusta el stock    |
 
 No existen (todavía): editar o borrar productos, detalle de un movimiento, reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
+
+---
+
+## Sesión (fase 2): en construcción en la API
+
+> El frontend ya usa este contrato (`src/services/api/auth.ts`, `src/types/auth.ts`, `src/auth/`).
+> Estado en la API (2026-11-09): `POST /auth/google` existe (happy path, sin manejo de errores todavía);
+> `/auth/logout` y `/me` aún responden 404. Mientras `/me` no exista, `RequireAuth` muestra "No pudimos comprobar tu
+> sesión" en todas las pantallas protegidas.
+> Diseño en D20 a D24 de [`modelo-de-datos.md`](../../api/docs/modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google).
+> Cuando la API termine cada endpoint, verifica contra el controller y mueve su fila a la tabla de arriba.
+
+| Método | Ruta            | Función del cliente          | Estado en la API | Descripción                                          |
+|--------|-----------------|------------------------------|------------------|------------------------------------------------------|
+| POST   | `/auth/google`  | `loginWithGoogle({ credential })` | Existe      | Verifica el ID token de Google, pone la cookie de sesión y responde **204** sin body |
+| POST   | `/auth/logout`  | `logout()`                   | Pendiente        | Revoca la sesión y borra la cookie                   |
+| GET    | `/me`           | `getMe()`                    | Pendiente        | Persona de la sesión y su tienda; **401** sin sesión |
+
+- **Cookie que pone `POST /auth/google`** (`AuthController`): nombre `session`, `HttpOnly`, `Secure`,
+  `SameSite=Strict` y `Expires` igual a la expiración de la sesión en la base (hoy 1 día, provisional: P16). Sin `Domain`,
+  así que solo la recibe el host de la API.
+
+- **Cookie de sesión `httpOnly`** (D22): la pone la API; el frontend nunca la lee ni guarda tokens. Todas las peticiones
+  van con `withCredentials: true` (en `http.ts`).
+- **CORS**: con credenciales el navegador rechaza `Access-Control-Allow-Origin: *`. La API necesita la lista explícita
+  de orígenes (`http://localhost:4200`, …) y `credentials: true`. Con `pnpm dev:lan` (`VITE_API_URL=/api`) las
+  peticiones pasan por el proxy de Vite y son del mismo origen, así que no aplica.
+- **401 en cualquier endpoint** = sesión vencida o revocada: el frontend manda a `/iniciar-sesion` y después regresa
+  a la pantalla pedida.
+- `POST /auth/google` responde `204` sin body: el frontend llama después a `GET /me` (decisión en la tabla 8.6 de
+  `modelo-de-datos.md`). Si la credencial no es válida, se espera **401** (la API todavía no maneja ese error).
+
+`POST /auth/google`, body (`GoogleLoginInput`, igual que `GoogleLoginDto` de la API):
+
+```json
+{ "credential": "<ID token (JWT) del botón de Google Identity Services>" }
+```
+
+`GET /me`, respuesta (`CurrentUser`):
+
+```json
+{
+  "id": "01a2...",
+  "email": "persona@gmail.com",
+  "name": "Persona",
+  "avatarUrl": "https://lh3.googleusercontent.com/...",
+  "store": { "id": "01a3...", "name": "Stickers del bazar" }
+}
+```
+
+`store` es `null` si la persona aún no registra su tienda (D16). El frontend todavía no hace nada con eso; en la etapa 3
+servirá para mandar al alta de tienda.
+
+Configuración: `VITE_GOOGLE_CLIENT_ID` en `apps/web/.env` (público; es el mismo Client ID que la API usa para validar `aud`, D23).
 
 ---
 

@@ -18,6 +18,14 @@ export default defineConfig(() => ({
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
+    headers: {
+      'Reporting-Endpoints': 'local-endpoint="/csp-report"',
+      // Orígenes de Google Identity Services (botón "Iniciar sesión con Google" en /iniciar-sesion).
+      'Content-Security-Policy-Report-Only':
+        'script-src https://accounts.google.com/gsi/client; frame-src https://accounts.google.com/gsi/; connect-src https://accounts.google.com/gsi/',
+      // Encabezado propio, no una directiva de la CSP. Permite que la ventana emergente de Google le responda a la página.
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
   },
   preview:{
     port: 4300,

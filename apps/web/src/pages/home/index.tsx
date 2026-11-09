@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router';
 import { Boxes, ChevronRight, History, PackagePlus, ShoppingBag, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { SignOutButton } from '../../components/SignOutButton';
+import { useCurrentUser } from '../../auth/AuthContext';
 
 interface MenuLinkProps {
   to: string;
@@ -23,11 +25,18 @@ function MenuLink({ to, icon: Icon, children }: MenuLinkProps) {
 }
 
 export function Home() {
+  const user = useCurrentUser();
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pt-safe pb-safe">
       <header className="mt-8 flex items-center justify-between gap-3">
-        <h1 className="text-2xl">Registro de ventas</h1>
-        <ThemeToggle />
+        <div className="flex min-w-0 flex-col">
+          <h1 className="text-2xl">Registro de ventas</h1>
+          <p className="truncate text-sm text-ink-muted">{user.name}</p>
+        </div>
+        <div className="flex items-center">
+          <ThemeToggle />
+          <SignOutButton />
+        </div>
       </header>
 
       <NavLink

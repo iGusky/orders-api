@@ -1,0 +1,11 @@
+model User {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  googleSub String    @unique
+  email     String
+  name      String
+  avatarUrl String?
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  store     Store?
+  sessions   Session[]
+}

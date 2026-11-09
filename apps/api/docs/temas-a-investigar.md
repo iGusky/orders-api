@@ -119,6 +119,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* que un `POST /movements` con `quantity: -5` o sin `productId` no llegue a la base de datos (I4).
   *Agregado:* 2026-10-24
 
+- [ ] **DTO de entrada HTTP frente a tipo de entrada de un service.**
+  ¿Qué diferencia hay entre una clase DTO con decoradores de `class-validator` y una `interface`/`type` plano como parámetro de un service? ¿El `ValidationPipe` valida algo cuando un service llama a otro? ¿Qué problema causa que `SessionsService` o `UsersService` reciban un DTO del controller de `auth`? (Conceptos relacionados: "command"/"input object", "parameter object" de refactoring.)
+  *Para qué:* definir las firmas de `UsersService` y `SessionsService` en el flujo de login con Google sin acoplarlas al contrato HTTP.
+  *Agregado:* 2026-11-09
+
 - [ ] **Compartir providers entre módulos en Nest (`exports` / `imports`).**
   ¿Qué pasa si declaras `ProductsService` en `providers` de dos módulos distintos? ¿Cuántas instancias hay? ¿Cómo se exporta desde `ProductModule`?
   *Para qué:* `MovementsModule` necesitará `ProductsService` para actualizar el stock (D2).
@@ -197,6 +202,36 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Qué protege realmente CORS? ¿Qué es una petición *preflight*? ¿Por qué `Access-Control-Allow-Origin: *` no funciona junto con cookies?
   *Para qué:* configurar `enableCors` en `main.ts` para el frontend.
   *Agregado:* 2026-10-30
+
+- [ ] **"Buscar o crear" con peticiones simultáneas.**
+  Si dos peticiones de `POST /auth/google` de la misma persona nueva llegan al mismo tiempo, ¿qué pasa con un `findUnique` seguido de un `create`? ¿Cómo resuelve esto `upsert` de Prisma y qué papel juega la restricción `UNIQUE` en la base? ¿Qué es el error `P2002`?
+  *Para qué:* que el primer inicio de sesión nunca cree dos usuarios con el mismo `googleSub` (D20, I15).
+  *Agregado:* 2026-11-04
+
+- [ ] **Tokens de sesión opacos: generación y almacenamiento.**
+  ¿Por qué el ID de sesión debe salir de `crypto.randomBytes` y no de un UUID v7 (D13), que se ordena por tiempo? ¿Por qué se guarda en la base el hash (SHA-256) del token y no el token? ¿Por qué aquí basta un hash rápido y para una contraseña no? ¿Qué es la expiración deslizante (*sliding expiration*)?
+  *Para qué:* implementar D24 y resolver P16.
+  *Agregado:* 2026-11-04
+
+- [ ] **Cross-Account Protection (RISC) de Google.**
+  ¿Qué eventos envía Google a tu backend (cuenta deshabilitada, sesiones revocadas, posible robo de cuenta)? ¿Qué es un *Security Event Token* y cómo se verifica? ¿Qué debería hacer la API al recibir uno?
+  *Para qué:* cerrar las sesiones propias de la API cuando la cuenta de Google de la persona se ve comprometida (D21, D22, P11).
+  *Agregado:* 2026-11-04
+
+- [ ] **Prefijos de cookie `__Host-` y `__Secure-`.**
+  ¿Qué obliga el navegador a una cookie llamada `__Host-session` (`Secure`, `Path=/`, sin `Domain`)? ¿Qué ataque evita (una cookie plantada desde otro subdominio)? ¿Funciona en `http://localhost` durante el desarrollo?
+  *Para qué:* que la cookie de sesión de D22 no se pueda sobrescribir desde otro subdominio del mismo sitio.
+  *Agregado:* 2026-11-04
+
+- [ ] **Escribir cookies desde un controller de Nest.**
+  ¿Qué diferencia hay entre `@Res()` y `@Res({ passthrough: true })`? ¿Por qué `res.cookie()` funciona sin `cookie-parser`, pero leer `req.cookies` no? ¿Qué capa debería conocer la cookie: el controller o el service?
+  *Para qué:* emitir y borrar la cookie de sesión en `POST /auth/google` y `POST /auth/logout` (D22, D24).
+  *Agregado:* 2026-11-04
+
+- [ ] **Validar las variables de entorno al arrancar.**
+  ¿Qué pasa hoy si falta `OAUTH_CLIENT_ID`? ¿Cómo se usa `validate` o `validationSchema` en `ConfigModule.forRoot()` para que la app no arranque con una configuración incompleta? ¿Qué ventaja tiene `ConfigService` frente a leer `process.env` directo?
+  *Para qué:* que la verificación del ID token (D23) nunca corra con un `audience` vacío.
+  *Agregado:* 2026-11-04
 
 - [ ] **Guards globales y decoradores propios en Nest.**
   ¿Cómo se registra un guard con `APP_GUARD`? ¿Cómo un decorador `@Public()` excluye una ruta? ¿Cómo se crea `@CurrentUser()` con `createParamDecorator`? ¿Qué diferencia hay entre autenticación y autorización?
