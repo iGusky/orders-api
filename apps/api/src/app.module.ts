@@ -13,7 +13,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { PrismaService } from './prisma/prisma.service.js';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
 import { UsersModule } from './modules/users/users.module.js';
-import { StoresModule } from './stores/stores.module.js';
+import { StoresModule } from './modules/stores/stores.module.js';
 
 @Module({
   imports: [

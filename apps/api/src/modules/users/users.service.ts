@@ -21,15 +21,16 @@ export class UsersService {
     return await this.prisma.user.findUniqueOrThrow({
       where: {
         id: id,
-        deletedAt: null
+        deletedAt: null,
       },
       select: {
         id: true,
         name: true,
         email: true,
-        avatarUrl: true
+        avatarUrl: true,
+        store: true
       }
-    })
+    });
   }
 
   async createUser(data: {

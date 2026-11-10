@@ -37,9 +37,9 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 ## Sesión (fase 2): en construcción en la API
 
 > El frontend ya usa este contrato (`src/services/api/auth.ts`, `src/types/auth.ts`, `src/auth/`).
-> Estado en la API (2026-11-09): `POST /auth/google` existe (happy path, sin manejo de errores todavía);
-> `/auth/logout` y `/me` aún responden 404. Mientras `/me` no exista, `RequireAuth` muestra "No pudimos comprobar tu
-> sesión" en todas las pantallas protegidas.
+> Estado en la API (2026-11-09): `POST /auth/google` existe (happy path, sin manejo de errores todavía) y
+> `GET /me` existe (`MeController`, en `modules/users`). `/auth/logout` aún responde 404, así que "Cerrar sesión"
+> muestra "No se pudo cerrar sesión".
 > Diseño en D20 a D24 de [`modelo-de-datos.md`](../../api/docs/modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google).
 > Cuando la API termine cada endpoint, verifica contra el controller y mueve su fila a la tabla de arriba.
 
@@ -47,7 +47,7 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 |--------|-----------------|------------------------------|------------------|------------------------------------------------------|
 | POST   | `/auth/google`  | `loginWithGoogle({ credential })` | Existe      | Verifica el ID token de Google, pone la cookie de sesión y responde **204** sin body |
 | POST   | `/auth/logout`  | `logout()`                   | Pendiente        | Revoca la sesión y borra la cookie                   |
-| GET    | `/me`           | `getMe()`                    | Pendiente        | Persona de la sesión y su tienda; **401** sin sesión |
+| GET    | `/me`           | `getMe()`                    | Existe           | Persona de la sesión y su tienda; **401** sin sesión |
 
 - **Cookie que pone `POST /auth/google`** (`AuthController`): nombre `session`, `HttpOnly`, `Secure`,
   `SameSite=Strict` y `Expires` igual a la expiración de la sesión en la base (hoy 1 día, provisional: P16). Sin `Domain`,
@@ -55,8 +55,8 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 
 - **Cookie de sesión `httpOnly`** (D22): la pone la API; el frontend nunca la lee ni guarda tokens. Todas las peticiones
   van con `withCredentials: true` (en `http.ts`).
-- **CORS**: con credenciales el navegador rechaza `Access-Control-Allow-Origin: *`. La API necesita la lista explícita
-  de orígenes (`http://localhost:4200`, …) y `credentials: true`. Con `pnpm dev:lan` (`VITE_API_URL=/api`) las
+- **CORS**: con credenciales el navegador rechaza `Access-Control-Allow-Origin: *`. La API ya permite solo
+  `http://localhost:4200` con `credentials: true` (`main.ts`). Con `pnpm dev:lan` (`VITE_API_URL=/api`) las
   peticiones pasan por el proxy de Vite y son del mismo origen, así que no aplica.
 - **401 en cualquier endpoint** = sesión vencida o revocada: el frontend manda a `/iniciar-sesion` y después regresa
   a la pantalla pedida.
@@ -69,19 +69,31 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 { "credential": "<ID token (JWT) del botón de Google Identity Services>" }
 ```
 
-`GET /me`, respuesta (`CurrentUser`):
+`GET /me`, respuesta (`CurrentUser`). Lee la cookie `session`; sin cookie o con una sesión inválida responde **401**
+(`"Sesión no encontrada"`):
 
 ```json
 {
   "id": "01a2...",
-  "email": "persona@gmail.com",
   "name": "Persona",
+  "email": "persona@gmail.com",
   "avatarUrl": "https://lh3.googleusercontent.com/...",
-  "store": { "id": "01a3...", "name": "Stickers del bazar" }
+  "store": {
+    "id": "01a3...",
+    "ownerId": "01a2...",
+    "name": "Stickers del bazar",
+    "address": "Bazar de la colonia, puesto 12",
+    "phone": "+52 55 1234 5678",
+    "description": null,
+    "contactEmail": null,
+    "createdAt": "2026-11-09T18:00:00.000Z",
+    "deletedAt": null
+  }
 }
 ```
 
-`store` es `null` si la persona aún no registra su tienda (D16). El frontend todavía no hace nada con eso; en la etapa 3
+`store` trae todas las columnas de `Store` (tipo `Store` en `src/types/auth.ts`), y es `null` si la persona aún no
+registra su tienda (D16). El frontend todavía no hace nada con eso; en la etapa 3
 servirá para mandar al alta de tienda.
 
 Configuración: `VITE_GOOGLE_CLIENT_ID` en `apps/web/.env` (público; es el mismo Client ID que la API usa para validar `aud`, D23).
