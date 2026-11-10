@@ -40,7 +40,15 @@ Revisión del 2026-11-09. Se dejan para después de terminar el flujo completo.
 - [ ] **"Buscar o crear" con peticiones simultáneas.** `findUnique` + `create` puede chocar con el `UNIQUE` de `googleSub` (I15). Ver el tema en `temas-a-investigar.md`.
 - [ ] **Usuario con borrado lógico.** `findUserByGsub` filtra `deletedAt: null`; si no lo encuentra, `create` falla por el `UNIQUE` de `googleSub`. Depende de P15.
 - [ ] **Quitar `txHost` de `AuthService`** si no se usa, y los imports sin uso de `users.service.ts`.
-- [ ] **Instalar y registrar `cookie-parser`** antes de leer la cookie (logout y guard).
+- [x] **Instalar y registrar `cookie-parser`** antes de leer la cookie (logout y guard).
+
+## Fase 2: `GET /me` (después del *happy path*)
+
+Revisión del 2026-11-09.
+
+- [ ] **El `catch` de `MeController` convierte cualquier error en 401.** Si la base no responde, el frontend manda a iniciar sesión en lugar de ofrecer "Reintentar". Solo "no hay cookie" y "sesión no válida" son 401; lo demás debe seguir siendo 500. Usar un error de dominio y el filter, como en `products`.
+- [ ] **Cookie ausente.** Hoy `hashToken(undefined)` lanza un `TypeError` que el `catch` convierte en 401 por accidente: validarlo de forma explícita.
+- [ ] **`StoresModule` quedó en `src/stores/`**, no en `src/modules/stores/` como el resto de módulos.
 
 ## `MovementItemService` y `MovementsService`
 

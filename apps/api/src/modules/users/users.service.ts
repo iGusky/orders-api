@@ -17,6 +17,21 @@ export class UsersService {
     return user;
   }
 
+  async findSessionUserById(id: string) {
+    return await this.prisma.user.findUniqueOrThrow({
+      where: {
+        id: id,
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true
+      }
+    })
+  }
+
   async createUser(data: {
     email: string;
     name: string;
