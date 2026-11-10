@@ -11,7 +11,7 @@ export class MeController {
   async me(@Req() req: Request) {
     try {
       const session = await this.sessionService.getSessionData(req.cookies.session)
-      return await this.service.findSessionUserById(session.id)
+      return await this.service.findSessionUserById(session.userId)
     } catch(e) {
       throw new HttpException('Sesión no encontrada',HttpStatus.UNAUTHORIZED) 
     }
