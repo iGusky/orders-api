@@ -1,8 +1,9 @@
-import { Controller, Get, HttpException, HttpStatus, Req, Response } from "@nestjs/common";
+import { Controller, Get, HttpException, HttpStatus, Req, Response, UseGuards } from "@nestjs/common";
 import { UsersService } from "./users.service.js";
 import { SessionsService } from "../sessions/sessions.service.js";
 import type { Request } from "express";
 import { StoresService } from "../stores/stores.service.js";
+import { AuthGuard } from "../../common/guards/auth.guard.js";
 
 @Controller('/me')
 export class MeController {

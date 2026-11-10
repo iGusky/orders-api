@@ -238,6 +238,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* exigir sesión por defecto (D21) y obtener la tienda de la sesión (D18).
   *Agregado:* 2026-10-30
 
+- [ ] **Dónde guardar al usuario de la petición: `req.user` frente a `nestjs-cls`.**
+  ¿Cómo se extiende el tipo `Request` de Express (*declaration merging*) para que `req.user` no sea `any`? ¿Qué ventaja tiene guardar el usuario y el `storeId` en `ClsService` (que ya usas para las transacciones) para que un service los lea sin recibirlos por parámetro? ¿Qué se pierde en claridad y en pruebas cuando un service depende de un contexto implícito?
+  *Para qué:* que el guard de sesión (D21) deje la tienda disponible para `products` y `movements` sin que venga del cliente (D18).
+  *Agregado:* 2026-11-09
+
 - [ ] **Estrategias de multi-tenancy.**
   Comparar columna `tenant_id`, un esquema por tenant y una base por tenant: aislamiento, costo y migraciones. ¿Qué es un *noisy neighbor*?
   *Para qué:* entender la decisión de D17 y cuándo habría que reconsiderarla.
