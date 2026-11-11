@@ -27,11 +27,13 @@ export class UsersService {
         id: true,
         name: true,
         email: true,
-        avatarUrl: true,
-        store: true
+        avatarUrl: true
       }
     });
   }
+
+  
+
 
   async createUser(data: {
     email: string;
@@ -51,3 +53,4 @@ export class UsersService {
     return response;
   }
 }
+

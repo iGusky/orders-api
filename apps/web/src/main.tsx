@@ -14,6 +14,8 @@ import { SignInPage } from './pages/iniciar-sesion';
 import { initTheme } from './hooks/useTheme';
 import { AuthProvider } from './auth/AuthProvider';
 import { RequireAuth, SIGN_IN_PATH } from './auth/RequireAuth';
+import { CREATE_STORE_PATH, RequireStore } from './auth/RequireStore';
+import { CreateStorePage } from './pages/registrar-tienda';
 
 // TEMPORAL: guía de estilos, solo en desarrollo. Ver src/pages/estilos/index.tsx para eliminarla.
 const StyleGuide = import.meta.env.DEV ? lazy(() => import('./pages/estilos')) : null;
@@ -32,12 +34,16 @@ root.render(
       <Route path={SIGN_IN_PATH} element={<SignInPage />}/>
       {/* Todo lo de aquí dentro exige sesión (D21). */}
       <Route element={<RequireAuth />}>
-        <Route path="/" element={<Home />}/>
-        <Route path="/movimientos" element={<MovementsPage />}/>
-        <Route path="/inventario" element={<InventoryPage />}/>
-        <Route path="/agregar-stock" element={<AddStockPage />}/>
-        <Route path="/registrar-venta" element={<SalePage />}/>
-        <Route path="/registrar-movimiento" element={<MovementFormPage />}/>
+        <Route path={CREATE_STORE_PATH} element={<CreateStorePage />}/>
+        {/* Y además una tienda registrada (D16): sin ella se manda al alta. */}
+        <Route element={<RequireStore />}>
+          <Route path="/" element={<Home />}/>
+          <Route path="/movimientos" element={<MovementsPage />}/>
+          <Route path="/inventario" element={<InventoryPage />}/>
+          <Route path="/agregar-stock" element={<AddStockPage />}/>
+          <Route path="/registrar-venta" element={<SalePage />}/>
+          <Route path="/registrar-movimiento" element={<MovementFormPage />}/>
+        </Route>
       </Route>
       {StyleGuide && (
         <Route path="/estilos" element={<Suspense fallback={null}><StyleGuide /></Suspense>} />

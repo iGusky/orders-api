@@ -27,4 +27,7 @@ export class DomainErrorFilter implements ExceptionFilter {
 const domainErrorToHttpCode: Record<DomainErrorCode, HttpStatus> = {
   [DomainErrorCode.ProductNotFound]: HttpStatus.NOT_FOUND,
   [DomainErrorCode.InsufficientStock]: HttpStatus.CONFLICT,
+  [DomainErrorCode.SessionNotFound]: HttpStatus.UNAUTHORIZED,
+  [DomainErrorCode.UserInfoNotFoundOnGoogle]: HttpStatus.UNAUTHORIZED,
+  [DomainErrorCode.UserAlreadyHasStore]: HttpStatus.CONFLICT
 };

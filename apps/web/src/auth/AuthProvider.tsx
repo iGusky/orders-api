@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { isAxiosError } from 'axios';
 import { getMe, loginWithGoogle, logout, onUnauthorized } from '../services/api';
 import { disableGoogleAutoSelect } from '../services/googleIdentity';
+import type { Store } from '../types/store';
 import { AuthContext, type AuthContextValue, type AuthState } from './AuthContext';
 
 // El frontend nunca ve la sesión: vive en una cookie httpOnly (D22). Solo pregunta a GET /me quién es la persona.
@@ -54,9 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'anonymous' });
   }, []);
 
+  const setStore = useCallback((store: Store) => {
+    setState((current) =>
+      current.status === 'authenticated' ? { status: 'authenticated', user: { ...current.user, store } } : current,
+    );
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ state, refresh, signIn, signOut }),
-    [state, refresh, signIn, signOut],
+    () => ({ state, refresh, signIn, signOut, setStore }),
+    [state, refresh, signIn, signOut, setStore],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

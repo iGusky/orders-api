@@ -60,9 +60,10 @@ src/
     GoogleSignInButton.tsx # Botón de Google Identity Services; entrega el ID token
     SignOutButton.tsx   # Botón de icono para cerrar sesión
   auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
-    AuthContext.ts      # AuthState, useAuth, useCurrentUser
+    AuthContext.ts      # AuthState, useAuth, useCurrentUser, useCurrentStore
     AuthProvider.tsx    # Carga GET /me, signIn, signOut; un 401 en cualquier petición pasa a "sin sesión"
     RequireAuth.tsx     # Ruta de layout: sin sesión redirige a /iniciar-sesion y luego regresa
+    RequireStore.tsx    # Ruta de layout (dentro de RequireAuth): sin tienda redirige a /registrar-tienda y luego regresa
   hooks/useQuery.ts     # Carga de datos con cancelación y reintento
   hooks/useDebouncedValue.ts
   hooks/useTheme.ts     # Tema claro/oscuro: lo aplica, lo guarda y sigue al dispositivo si no hay elección
@@ -71,6 +72,7 @@ src/
     products.ts         # getProducts, getProductById, createProduct
     movements.ts        # getMovements, createMovement
     auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized
+    stores.ts           # createStore
     errors.ts           # getApiErrorBody, getDomainError
   services/googleIdentity.ts # Carga el script de Google Identity Services (solo en /iniciar-sesion)
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
@@ -92,8 +94,9 @@ src/
 - Para leer datos usa `useQuery(key, (signal) => getX(..., { signal }))` de `src/hooks/useQuery.ts`: cancela la petición
   anterior y conserva los datos previos mientras carga (atenúa la lista con `opacity-60` en lugar de mostrar el esqueleto otra vez).
   `key` debe incluir todo lo que cambia la petición.
-- Toda pantalla nueva va dentro de `<Route element={<RequireAuth />}>` en `main.tsx`, salvo que sea pública a
-  propósito (hoy solo `/iniciar-sesion`). Dentro de esas pantallas, la persona se lee con `useCurrentUser()`.
+- Toda pantalla nueva va dentro de `<Route element={<RequireAuth />}>` y de `<Route element={<RequireStore />}>` en
+  `main.tsx`, salvo que sea pública a propósito (hoy solo `/iniciar-sesion`) o sea el alta de tienda (`/registrar-tienda`).
+  Dentro de esas pantallas, la persona se lee con `useCurrentUser()` y su tienda con `useCurrentStore()`.
 - La página actual y la búsqueda de una lista viven en la URL (`?pagina=2&buscar=pin`) para que funcione el botón atrás.
 
 ### Dinero (D4, D15)

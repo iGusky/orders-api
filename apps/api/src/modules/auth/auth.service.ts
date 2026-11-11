@@ -5,6 +5,8 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { UsersService } from '../users/users.service.js';
 import { SessionsService } from '../sessions/sessions.service.js';
+import { SessionNotFoundError } from './exceptions/SessionNotFoundException.js';
+import { UserInfoNotFoundOnGoogle } from './exceptions/UserInfoNotFoundOnGoogle.js';
 
 const client = new OAuth2Client();
 
@@ -27,8 +29,7 @@ export class AuthService {
     });
 
     const payload = ticket.getPayload();
-
-    if (!payload) throw new Error('');
+    if (!payload) throw new SessionNotFoundError()
 
     let user = await this.usersService.findUserByGsub(payload.sub);
 
@@ -36,7 +37,7 @@ export class AuthService {
     if (user == null) {
       const { email, name, sub, picture } = payload;
 
-      if (!email || !name ) throw new Error('');
+      if (!email || !name ) throw new UserInfoNotFoundOnGoogle();
 
       user = await this.usersService.createUser({
         email: email,

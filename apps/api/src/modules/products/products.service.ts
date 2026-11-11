@@ -12,7 +12,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 export class ProductsService {
   constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma>) {}
 
-  async getAllProductsPaginated({ search, page, perPage }: ProductsIndexParamsDto) {
+  async getAllProductsPaginated({ search, page, perPage }: ProductsIndexParamsDto, storeId: string) {
     
     const itemsToSkip = perPage * (page - 1)
 
@@ -21,6 +21,7 @@ export class ProductsService {
         contains: search,
         mode: 'insensitive'
       },
+      storeId: storeId,
       deletedAt: null
     }
 
@@ -43,26 +44,27 @@ export class ProductsService {
     }
   }
 
-  async createProduct(product: CreateProductDto) {
+  async createProduct(product: CreateProductDto, storeId: string) {
     const result = await this.txHost.tx.product.create({
       data: {
         name: product.name,
         priceCents: product.priceCents,
-        description: product.description
+        description: product.description,
+        storeId: storeId
       },
     });
     return result;
   }
 
-  async getProductById(id: string): Promise<Product> {
-    const product = await this.txHost.tx.product.findUnique({where: { id: id.trim(), deletedAt: null }})
+  async getProductById(id: string, storeId): Promise<Product> {
+    const product = await this.txHost.tx.product.findUnique({where: { id: id.trim(), storeId: storeId, deletedAt: null }})
     if(!product) throw new ProductNotFoundError(id)
     return product;
   }
 
-  async updateProduct(newProductData: UpdateProductDto, id: string) {
+  async updateProduct(newProductData: UpdateProductDto, id: string, storeId: string) {
     return await this.txHost.tx.product.update({
-      where: {id},
+      where: {id, storeId: storeId,},
       data: {
         ...newProductData
       }

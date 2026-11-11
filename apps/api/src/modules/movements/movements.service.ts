@@ -15,7 +15,7 @@ export class MovementsService {
   ) {}
 
   @Transactional()
-  async createMovement(data: CreateMovementDto) {
+  async createMovement(data: CreateMovementDto, storeId) {
     var totalCents = 0;
 
     if (data.type == MovementType.SALE || data.type == MovementType.RETURN) {
@@ -30,6 +30,7 @@ export class MovementsService {
         direction: data.direction,
         totalCents: totalCents,
         occurredAt: data.occurredAt ?? new Date(),
+        storeId: storeId
       },
     });
 
@@ -40,7 +41,7 @@ export class MovementsService {
     })
 
     for (const item of data.items) {
-      await this.movementItermsService.createAndAppendItem(item, movement);
+      await this.movementItermsService.createAndAppendItem(item, movement, storeId);
     }
     return movement;
   }
@@ -52,12 +53,13 @@ export class MovementsService {
     direction,
     dateStart,
     dateEnd,
-  }: IndexMovementsPaginated) {
+  }: IndexMovementsPaginated, storeId: string) {
     
     const itemsToSkip = perPage * (page - 1);
     const where = {
       type,
       direction: type == MovementType.ADJUSTMENT ? direction : undefined,
+      storeId: storeId,
       occurredAt: {
         gte: dateStart,
         lte: dateEnd,

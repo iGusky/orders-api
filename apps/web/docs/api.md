@@ -5,7 +5,7 @@
 > y el diseño en [`apps/api/docs/modelo-de-datos.md`](../../api/docs/modelo-de-datos.md).
 > Si este documento y el código no coinciden, gana el código: actualiza este archivo.
 
-Última revisión contra el código: 2026-11-02
+Última revisión contra el código: 2026-11-11
 
 ---
 
@@ -48,6 +48,7 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 | POST   | `/auth/google`  | `loginWithGoogle({ credential })` | Existe      | Verifica el ID token de Google, pone la cookie de sesión y responde **204** sin body |
 | POST   | `/auth/logout`  | `logout()`                   | Pendiente        | Revoca la sesión y borra la cookie                   |
 | GET    | `/me`           | `getMe()`                    | Existe           | Persona de la sesión y su tienda; **401** sin sesión |
+| POST   | `/stores`       | `createStore(input)`         | Existe           | Crea la tienda de la persona de la sesión; **409** si ya tiene una |
 
 - **Cookie que pone `POST /auth/google`** (`AuthController`): nombre `session`, `HttpOnly`, `Secure`,
   `SameSite=Strict` y `Expires` igual a la expiración de la sesión en la base (hoy 1 día, provisional: P16). Sin `Domain`,
@@ -92,9 +93,24 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 }
 ```
 
-`store` trae todas las columnas de `Store` (tipo `Store` en `src/types/auth.ts`), y es `null` si la persona aún no
-registra su tienda (D16). El frontend todavía no hace nada con eso; en la etapa 3
-servirá para mandar al alta de tienda.
+`store` trae todas las columnas de `Store` (tipo `Store` en `src/types/store.ts`), y es `null` si la persona aún no
+registra su tienda (D16). En ese caso `<RequireStore>` manda a `/registrar-tienda` antes de cualquier otra pantalla.
+
+`POST /stores` (`StoresController`, detrás del `AuthGuard` global: **401** sin sesión). Body (`CreateStoreInput`,
+igual que `CreateStoreDto`):
+
+| Campo          | Tipo   | Requerido | Reglas en la API         |
+|----------------|--------|-----------|--------------------------|
+| `name`         | string | sí        | No vacío                 |
+| `address`      | string | sí        | No vacío                 |
+| `phone`        | string | sí        | No vacío (sin formato)   |
+| `description`  | string | no        |                          |
+| `contactEmail` | string | no        | Correo válido (`@IsEmail`) |
+
+- Respuesta: la `Store` creada (mismas columnas que en `GET /me`).
+- **409** `{ "statusCode": 409, "message": "El usuario ya tiene una tienda" }`, sin `errorCode`. El frontend vuelve a
+  pedir `GET /me` y, si ya hay tienda, sigue con ella.
+- El formulario además pide al menos 8 dígitos en el teléfono; la API no lo valida.
 
 Configuración: `VITE_GOOGLE_CLIENT_ID` en `apps/web/.env` (público; es el mismo Client ID que la API usa para validar `aud`, D23).
 
@@ -295,3 +311,7 @@ ni "compenses" estos comportamientos en la UI sin preguntar; repórtalos.
 4. **Fechas sin hora completa:** `@IsISO8601` acepta `2026-10-26` y `2026-10-26T10:00:00` (sin zona horaria), pero
    Prisma solo acepta fecha y hora con zona, así que `GET /movements` responde 500 en lugar de 400. `occurredAt` en
    `POST /movements` pasa la misma validación. Manda siempre `toISOString()`.
+5. **`POST /stores` responde 409 ante cualquier error:** el `catch` del controller convierte todo (también un fallo de
+   la base de datos) en "El usuario ya tiene una tienda". Por eso el frontend confirma con `GET /me` antes de dar por
+   hecho que la tienda existe. Propuesta: que el service lance un error de dominio (`STORE_ALREADY_EXISTS`, 409) y que
+   el controller no atrape lo demás.

@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { CurrentUser } from '../types/auth';
+import type { Store } from '../types/store';
 
 // - loading: todavía no se sabe si hay sesión (GET /me en curso).
 // - authenticated: GET /me respondió con la persona.
@@ -19,6 +20,8 @@ export interface AuthContextValue {
   signIn: (credential: string) => Promise<void>;
   // Cierra la sesión en la API (POST /auth/logout). Lanza si la API no responde.
   signOut: () => Promise<void>;
+  // Guarda la tienda recién creada en la persona actual, sin volver a pedir GET /me.
+  setStore: (store: Store) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,4 +37,11 @@ export function useCurrentUser(): CurrentUser {
   const { state } = useAuth();
   if (state.status !== 'authenticated') throw new Error('useCurrentUser requiere una sesión activa');
   return state.user;
+}
+
+// Para pantallas que ya están detrás de <RequireStore>: la persona y su tienda (D16).
+export function useCurrentStore(): Store {
+  const { store } = useCurrentUser();
+  if (!store) throw new Error('useCurrentStore requiere una tienda registrada');
+  return store;
 }

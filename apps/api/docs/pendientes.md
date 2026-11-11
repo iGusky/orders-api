@@ -7,6 +7,20 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
 
 ---
 
+## Antes del primer despliegue
+
+Revisión del 2026-11-11.
+
+- [ ] **`start:prod` apunta a un archivo que no existe.** `nest build` deja la salida en `dist/src/main.js` (porque `prisma.config.ts` y `generated/` entran en la compilación), pero el script ejecuta `node dist/main`.
+- [ ] **Generar el cliente de Prisma y aplicar migraciones en el pipeline.** `generated/` está en `.gitignore`, así que el build del servidor debe correr `generate`. En producción se usa `migrate deploy`, nunca `migrate dev`.
+- [ ] **CORS con el origen de producción.** `origin` está fijo en `http://localhost:4200`. Leerlo de una variable de entorno (lista explícita, D22). Agregar también el origen en Google Cloud (D23).
+- [ ] **Validar variables de entorno al arrancar.** Sin `OAUTH_CLIENT_ID`, `verifyIdToken` recibe `audience: undefined` y **no valida `aud`**: aceptaría ID tokens emitidos para cualquier otra app de Google (D21).
+- [ ] **Usuario sin tienda → 500 en `products` y `movements`.** `@Store()` devuelve `null` y el controller hace `store.id`. Responder con un error de dominio propio (8.6).
+- [ ] **Renglones de `POST /movements` sin validación anidada.** Una venta con `quantity: -5` *suma* stock. Ver "Antes de la fase 2".
+- [ ] **`ValidationPipe` sin `whitelist`.** Los campos extra del body llegan al service; `updateProduct` hace `...newProductData`.
+- [ ] **Falta `POST /auth/logout`** (D22, D24).
+- [ ] **Publicar en subdominios de un dominio propio** (D22). En `*.onrender.com` o `*.vercel.app` la cookie `SameSite=Strict` no viaja.
+
 ## Antes de la fase 2
 
 Hallazgos al revisar el código para la [fase 2](modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google). También sigue abierto "Leer, verificar y escribir no es seguro con peticiones simultáneas", más abajo.

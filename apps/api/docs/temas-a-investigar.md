@@ -43,6 +43,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* `totalItems` y `totalPages` en `GET /products` cuando haya muchos productos.
   *Agregado:* 2026-10-08
 
+- [ ] **`prisma migrate dev` frente a `prisma migrate deploy`.**
+  ¿Qué hace cada uno con el *shadow database*, con el *drift* y con migraciones que faltan? ¿Por qué `migrate dev` nunca debe correr contra producción? ¿En qué paso del despliegue van `generate` y `migrate deploy` (build, arranque o un job aparte) y qué pasa si dos instancias migran al mismo tiempo?
+  *Para qué:* el primer despliegue de la API con la base de la fase 2 (D17, P12).
+  *Agregado:* 2026-11-11
+
 ## Concurrencia y consistencia
 
 - [ ] **Update atómico condicional en Prisma.**
@@ -243,6 +248,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* que el guard de sesión (D21) deje la tienda disponible para `products` y `movements` sin que venga del cliente (D18).
   *Agregado:* 2026-11-09
 
+- [ ] **Scopes de inyección en Nest: `DEFAULT`, `REQUEST` y `TRANSIENT`.**
+  ¿Qué le pasa a un provider que inyecta `REQUEST`? ¿Qué es el *scope bubbling* (pista: ¿qué scope terminan teniendo `StoresController` y `MeController`)? ¿Cuánto cuesta crear el grafo de instancias en cada petición? ¿Qué pasa si ese service se usa desde un job o un CLI, donde no hay petición? ¿Por qué `nestjs-cls` (AsyncLocalStorage) da contexto por petición sin volver *request-scoped* a los providers?
+  *Para qué:* decidir cómo obtiene `StoresService.createStore` el dueño de la tienda (D18, I14) sin repetir la lectura de la cookie en cada service.
+  *Agregado:* 2026-11-11
+
 - [ ] **Estrategias de multi-tenancy.**
   Comparar columna `tenant_id`, un esquema por tenant y una base por tenant: aislamiento, costo y migraciones. ¿Qué es un *noisy neighbor*?
   *Para qué:* entender la decisión de D17 y cuándo habría que reconsiderarla.
@@ -294,6 +304,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Por qué TypeScript 6 marca TS2564 si el `tsconfig` no tiene `"strict": true` (pista: valores por defecto de TS 6)? ¿Qué le promete al compilador `name!: string` y qué pasa si la promesa es falsa? ¿Qué cambia en el tipo de `description` al escribir `description?: string`?
   *Para qué:* quitar los constructores de los DTOs (`CreateProductDto`, `ProductsIndexParamsDto`) sin mentirle al compilador sobre qué campos pueden ser `undefined`.
   *Agregado:* 2026-10-09
+
+- [ ] **Qué revisa realmente `skipLibCheck` y cómo tipar sin `any` implícito.**
+  ¿Por qué `tsc` no marca error con `avatarUrl: strimg` en `express.d.ts` (pista: `skipLibCheck` se salta *todos* los `.d.ts`, también los tuyos)? ¿Qué hace `noImplicitAny: false` con un parámetro sin tipo como `storeId` o `@Store() store`? ¿Conviene mover la ampliación de `Request` a un `.ts` normal?
+  *Para qué:* que el compilador detecte un `storeId` mal pasado o un `store` nulo antes de que llegue a producción (D18, I13).
+  *Agregado:* 2026-11-11
 
 - [ ] **Documentar la API con OpenAPI (`@nestjs/swagger`).**
   ¿Cómo genera Nest la especificación a partir de los DTOs y decoradores? ¿Qué diferencia hay entre esa especificación y una colección de Bruno?

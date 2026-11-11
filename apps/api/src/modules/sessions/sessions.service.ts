@@ -3,6 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { SESSION_DAYS_LIMIT } from '../../common/constants/index.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { UsersService } from '../users/users.service.js';
+import { SessionNotFoundError } from '../auth/exceptions/SessionNotFoundException.js';
 
 @Injectable()
 export class SessionsService {
@@ -32,7 +33,7 @@ export class SessionsService {
   
   async getSessionData(token: string) {
     const session = await this.findSession(token)
-    if(!session) throw new Error('Sesión no encontrada')
+    if(!session) throw new SessionNotFoundError()
     return session;
   }
 
