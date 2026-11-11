@@ -29,5 +29,6 @@ const domainErrorToHttpCode: Record<DomainErrorCode, HttpStatus> = {
   [DomainErrorCode.InsufficientStock]: HttpStatus.CONFLICT,
   [DomainErrorCode.SessionNotFound]: HttpStatus.UNAUTHORIZED,
   [DomainErrorCode.UserInfoNotFoundOnGoogle]: HttpStatus.UNAUTHORIZED,
-  [DomainErrorCode.UserAlreadyHasStore]: HttpStatus.CONFLICT
+  [DomainErrorCode.UserAlreadyHasStore]: HttpStatus.CONFLICT,
+  [DomainErrorCode.StoreRequiredError]: HttpStatus.FORBIDDEN,
 };

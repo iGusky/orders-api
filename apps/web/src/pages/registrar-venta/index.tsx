@@ -20,6 +20,7 @@ import {
   toMovementItems,
   type SaleItem,
 } from './sale';
+import { failedMessage } from '../../utils/requestErrors';
 
 type Stage = 'idle' | 'checking' | 'saving';
 
@@ -33,7 +34,7 @@ function requestErrorMessage(error: unknown): string {
   if (domainError?.errorCode === 'INSUFFICIENT_STOCK') return 'Alguien más vendió unidades mientras capturabas. Revisa las cantidades.';
   if (domainError?.errorCode === 'PRODUCT_NOT_FOUND') return 'Uno de los productos ya no existe. Quítalo de la venta.';
   if (getApiErrorBody(error)?.statusCode === 400) return 'La API rechazó la venta. Revisa las cantidades y el total.';
-  return 'No se pudo registrar la venta. Revisa tu conexión e inténtalo otra vez.';
+  return failedMessage('No se pudo registrar la venta.', error);
 }
 
 function RequestError({ message, className }: { message: string; className: string }) {
@@ -111,7 +112,7 @@ export function SalePage() {
       setRequestError(
         getDomainError(error)?.errorCode === 'PRODUCT_NOT_FOUND'
           ? 'Uno de los productos ya no existe. Quítalo de la venta.'
-          : 'No se pudieron revisar las existencias. Revisa tu conexión e inténtalo otra vez.',
+          : failedMessage('No se pudieron revisar las existencias.', error),
       );
       return;
     }

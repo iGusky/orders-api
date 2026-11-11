@@ -27,6 +27,7 @@ import {
   type MovementFormItem,
   type MovementKind,
 } from './movementForm';
+import { failedMessage } from '../../utils/requestErrors';
 
 interface SavedMovement {
   kind: MovementKind;
@@ -39,7 +40,7 @@ function requestErrorMessage(error: unknown): string {
   if (domainError?.errorCode === 'INSUFFICIENT_STOCK') return 'Ya no hay stock suficiente de alguno de los productos. Revisa las cantidades.';
   if (domainError?.errorCode === 'PRODUCT_NOT_FOUND') return 'Uno de los productos ya no existe. Quítalo del movimiento.';
   if (getApiErrorBody(error)?.statusCode === 400) return 'La API rechazó el movimiento. Revisa las cantidades y los importes.';
-  return 'No se pudo registrar el movimiento. Revisa tu conexión e inténtalo otra vez.';
+  return failedMessage('No se pudo registrar el movimiento.', error);
 }
 
 export function MovementFormPage() {

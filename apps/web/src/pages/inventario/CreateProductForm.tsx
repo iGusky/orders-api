@@ -3,6 +3,7 @@ import { CircleAlert, Loader2 } from 'lucide-react';
 import { createProduct, getApiErrorBody } from '../../services/api';
 import type { Product } from '../../types/product';
 import { MAX_CENTS, parsePesos } from '../../utils/money';
+import { failedMessage } from '../../utils/requestErrors';
 
 
 interface FormErrors {
@@ -66,7 +67,7 @@ export function CreateProductForm({ onCreated, onCancel }: CreateProductFormProp
       setRequestError(
         getApiErrorBody(error)?.statusCode === 400
           ? 'La API rechazó los datos. Revisa el nombre y el precio.'
-          : 'No se pudo guardar el producto. Revisa tu conexión e inténtalo otra vez.',
+          : failedMessage('No se pudo guardar el producto.', error),
       );
       setSaving(false);
     }

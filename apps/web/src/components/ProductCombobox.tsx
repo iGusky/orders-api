@@ -5,6 +5,7 @@ import { useQuery } from '../hooks/useQuery';
 import { getProducts } from '../services/api';
 import type { Product } from '../types/product';
 import { StockBadge } from './StockBadge';
+import { failedMessage } from '../utils/requestErrors';
 
 // Solo se pide la primera página; con más productos, el usuario filtra escribiendo.
 const OPTIONS_PER_PAGE = 100;
@@ -33,7 +34,7 @@ export function ProductCombobox({ label, value, onChange, error, refreshKey = 0,
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const search = useDebouncedValue(query.trim(), 300);
-  const { status, data, refetch } = useQuery(`product-options:${search}:${refreshKey}`, (signal) =>
+  const { status, data, error: loadError, refetch } = useQuery(`product-options:${search}:${refreshKey}`, (signal) =>
     getProducts({ page: 1, perPage: OPTIONS_PER_PAGE, search: search || undefined }, { signal }),
   );
   const options = data?.data ?? [];
@@ -167,7 +168,7 @@ export function ProductCombobox({ label, value, onChange, error, refreshKey = 0,
 
           {status === 'error' && (
             <div className="flex flex-col items-start gap-2 p-4">
-              <p className="flex items-center gap-2"><CircleAlert className="size-5 text-danger" aria-hidden />No se pudieron cargar los productos.</p>
+              <p className="flex items-start gap-2"><CircleAlert className="size-5 shrink-0 text-danger" aria-hidden />{failedMessage('No se pudieron cargar los productos.', loadError)}</p>
               <button type="button" onClick={refetch} className="h-touch rounded-md border border-line bg-surface px-4 font-semibold active:bg-primary-soft">
                 Reintentar
               </button>

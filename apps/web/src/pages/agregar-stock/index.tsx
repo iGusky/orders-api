@@ -7,6 +7,7 @@ import { QuantityStepper } from '../../components/QuantityStepper';
 import { Toast } from '../../components/Toast';
 import { createMovement, getApiErrorBody, getDomainError, getProductById } from '../../services/api';
 import type { Product } from '../../types/product';
+import { failedMessage } from '../../utils/requestErrors';
 
 // Límite de la columna Int de PostgreSQL: el stock resultante no puede pasarlo.
 const MAX_STOCK = 2_147_483_647;
@@ -29,7 +30,7 @@ function validateQuantity(value: string, product: Product | null): string | unde
 function requestErrorMessage(error: unknown): string {
   if (getDomainError(error)?.errorCode === 'PRODUCT_NOT_FOUND') return 'Ese producto ya no existe. Elige otro.';
   if (getApiErrorBody(error)?.statusCode === 400) return 'La API rechazó el movimiento. Revisa la cantidad.';
-  return 'No se pudo guardar el stock. Revisa tu conexión e inténtalo otra vez.';
+  return failedMessage('No se pudo guardar el stock.', error);
 }
 
 export function AddStockPage() {

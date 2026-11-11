@@ -3,23 +3,24 @@ import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/CreateProductDto.js';
 import { IndexProductsDto } from './dto/IndexProductsPaginated.js';
 import { Store } from '../../common/decorators/store.decorator.js';
+import type { StoreInfo } from '../../common/types/express.js';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly service: ProductsService) {}
 
   @Get()
-  async getIndex(@Query() params: IndexProductsDto, @Store() store) {
+  async getIndex(@Query() params: IndexProductsDto, @Store() store: StoreInfo) {
     return this.service.getAllProductsPaginated(params, store.id);
   }
 
   @Post()
-  async createProduct(@Body() productDto: CreateProductDto, @Store() store) {
+  async createProduct(@Body() productDto: CreateProductDto, @Store() store: StoreInfo) {
     return this.service.createProduct(productDto, store.id);
   }
 
   @Get(':id')
-  async getProductById(@Param('id', new ParseUUIDPipe()) id: string, @Store() store) {
+  async getProductById(@Param('id', new ParseUUIDPipe()) id: string, @Store() store: StoreInfo) {
     return this.service.getProductById(id, store.id)
   }
 }

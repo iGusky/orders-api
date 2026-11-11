@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { CircleAlert, Loader2 } from 'lucide-react';
-import { createStore, getApiErrorBody, getMe } from '../../services/api';
+import { createStore, getApiErrorBody, getDomainError } from '../../services/api';
 import { FieldError } from '../../components/FieldError';
-import type { CreateStoreInput, Store } from '../../types/store';
+import type { CreateStoreInput, StoreInfo } from '../../types/store';
+import { failedMessage } from '../../utils/requestErrors';
 
 interface StoreFields {
   name: string;
@@ -51,10 +52,12 @@ function borderFor(error?: string) {
 }
 
 interface CreateStoreFormProps {
-  onCreated: (store: Store) => void;
+  onCreated: (store: StoreInfo) => void;
+  // La API respondió que la persona ya tiene tienda.
+  onAlreadyRegistered: () => void;
 }
 
-export function CreateStoreForm({ onCreated }: CreateStoreFormProps) {
+export function CreateStoreForm({ onCreated, onAlreadyRegistered }: CreateStoreFormProps) {
   const [fields, setFields] = useState<StoreFields>(EMPTY_FIELDS);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -74,19 +77,16 @@ export function CreateStoreForm({ onCreated }: CreateStoreFormProps) {
     try {
       onCreated(await createStore(toInput(fields)));
     } catch (error) {
-      const status = getApiErrorBody(error)?.statusCode;
-      // 409: la persona ya tiene tienda (por ejemplo, la registró en otro dispositivo). Se carga y se sigue.
-      if (status === 409) {
-        const existing = await getMe().then((user) => user.store).catch(() => null);
-        if (existing) {
-          onCreated(existing);
-          return;
-        }
+      // USER_HAS_STORE: ya la registró (en otro dispositivo, o un doble envío). Se recarga GET /me y
+      // <CreateStorePage> sigue a la pantalla pedida con la tienda que ya existe.
+      if (getDomainError(error)?.errorCode === 'USER_HAS_STORE') {
+        onAlreadyRegistered();
+        return;
       }
       setRequestError(
-        status === 400
+        getApiErrorBody(error)?.statusCode === 400
           ? 'La API rechazó los datos. Revisa el nombre, la dirección, el teléfono y el correo.'
-          : 'No se pudo registrar la tienda. Revisa tu conexión e inténtalo otra vez.',
+          : failedMessage('No se pudo registrar la tienda.', error),
       );
       setSaving(false);
     }

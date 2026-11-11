@@ -14,6 +14,7 @@ import { getProducts } from '../../services/api';
 import type { Product } from '../../types/product';
 import { formatCents } from '../../utils/money';
 import { CreateProductForm } from './CreateProductForm';
+import { failedMessage } from '../../utils/requestErrors';
 
 const PER_PAGE = 20;
 const PAGE_PARAM = 'pagina';
@@ -111,7 +112,7 @@ export function InventoryPage() {
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const { status, data, refetch } = useQuery(`products:${page}:${search}`, (signal) =>
+  const { status, data, error, refetch } = useQuery(`products:${page}:${search}`, (signal) =>
     getProducts({ page, perPage: PER_PAGE, search: search || undefined }, { signal }),
   );
 
@@ -163,7 +164,7 @@ export function InventoryPage() {
       {status === 'loading' && !data && <LoadingRows />}
 
       {status === 'error' && (
-        <ErrorPanel message="No se pudo cargar el inventario. Revisa tu conexión e inténtalo otra vez." onRetry={refetch} />
+        <ErrorPanel message={failedMessage('No se pudo cargar el inventario.', error)} onRetry={refetch} />
       )}
 
       {status !== 'error' && data && data.totalItems === 0 && !search && (

@@ -17,9 +17,26 @@ export function onUnauthorized(listener: () => void) {
   };
 }
 
+// Avisos de "la persona no tiene tienda" (403 USER_DONT_HAVE_STORE en /products y /movements). Los escucha
+// AuthProvider para mandar al alta de tienda.
+const storeRequiredListeners = new Set<() => void>();
+
+export function onStoreRequired(listener: () => void) {
+  storeRequiredListeners.add(listener);
+  return () => {
+    storeRequiredListeners.delete(listener);
+  };
+}
+
 http.interceptors.response.use(undefined, (error) => {
-  if (axios.isAxiosError(error) && error.response?.status === 401) {
-    unauthorizedListeners.forEach((listener) => listener());
+  if (axios.isAxiosError<{ errorCode?: string }>(error)) {
+    const status = error.response?.status;
+    // POST /auth/google también responde 401 si Google no confirma la cuenta; eso lo maneja /iniciar-sesion.
+    const isLogin = error.config?.url === '/auth/google';
+    if (status === 401 && !isLogin) unauthorizedListeners.forEach((listener) => listener());
+    if (status === 403 && error.response?.data?.errorCode === 'USER_DONT_HAVE_STORE') {
+      storeRequiredListeners.forEach((listener) => listener());
+    }
   }
   return Promise.reject(error);
 });

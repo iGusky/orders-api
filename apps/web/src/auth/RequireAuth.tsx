@@ -27,7 +27,14 @@ export function RequireAuth() {
     return (
       <main className="mx-auto flex max-w-2xl flex-col px-4 pt-safe pb-safe">
         <div className="mt-8">
-          <ErrorPanel message="No pudimos comprobar tu sesión. Revisa tu conexión." onRetry={refresh} />
+          <ErrorPanel
+            message={
+              state.failure === 'server'
+                ? 'No pudimos comprobar tu sesión: el servidor tuvo un problema. Inténtalo otra vez en un momento.'
+                : 'No pudimos comprobar tu sesión. Revisa tu conexión e inténtalo otra vez.'
+            }
+            onRetry={refresh}
+          />
         </div>
       </main>
     );

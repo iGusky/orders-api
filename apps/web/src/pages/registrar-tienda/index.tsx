@@ -10,7 +10,7 @@ import { CreateStoreForm } from './CreateStoreForm';
 // a la pantalla que se pidió. Sin back: no hay a dónde volver hasta que exista la tienda.
 export function CreateStorePage() {
   const user = useCurrentUser();
-  const { setStore } = useAuth();
+  const { setStore, refresh } = useAuth();
   const location = useLocation();
   const from = (location.state as CreateStoreLocationState | null)?.from ?? '/';
 
@@ -35,7 +35,7 @@ export function CreateStorePage() {
         </div>
       </header>
 
-      <CreateStoreForm onCreated={setStore} />
+      <CreateStoreForm onCreated={setStore} onAlreadyRegistered={refresh} />
     </main>
   );
 }

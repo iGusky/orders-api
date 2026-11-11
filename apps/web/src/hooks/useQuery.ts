@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface QueryState<T> {
   status: 'loading' | 'error' | 'success';
   data?: T;   // se conserva el último resultado mientras carga el siguiente
+  error?: unknown; // el último error, para explicar qué pasó (ver utils/requestErrors.ts)
 }
 
 // Ejecuta `fetcher` cada vez que cambia `key` y cancela la petición anterior.
@@ -20,8 +21,8 @@ export function useQuery<T>(key: string, fetcher: (signal: AbortSignal) => Promi
 
     fetcherRef.current(controller.signal)
       .then((data) => setState({ status: 'success', data }))
-      .catch(() => {
-        if (!controller.signal.aborted) setState((prev) => ({ status: 'error', data: prev.data }));
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setState((prev) => ({ status: 'error', data: prev.data, error }));
       });
 
     return () => controller.abort();

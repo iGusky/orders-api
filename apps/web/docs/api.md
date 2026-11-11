@@ -12,8 +12,10 @@
 ## Generalidades
 
 - **Base URL:** `import.meta.env.VITE_API_URL` (definida en `apps/web/.env`). La API escucha en el puerto `3000` por defecto.
-- **Formato:** JSON en request y response. Hoy la API no exige sesión y su CORS está abierto (`*`); ver
-  "Sesión (fase 2)" más abajo para lo que el frontend ya espera.
+- **Formato:** JSON en request y response.
+- **Sesión y tienda:** todo endpoint exige sesión (`AuthGuard` global; sin ella **401** `SESSION_NOT_FOUND`), salvo
+  `POST /auth/google`. `/products` y `/movements` además exigen tienda: sin ella **403** `USER_DONT_HAVE_STORE`.
+  Ver "Sesión (fase 2)" y "Errores".
 - **IDs:** UUID v7 (`string`).
 - **Fechas:** strings ISO 8601 en las respuestas (JSON no tiene tipo `Date`).
 - **Dinero:** siempre **entero en centavos**, con sufijo `Cents`. La API nunca convierte a pesos;
@@ -30,6 +32,9 @@
 | GET    | `/movements`      | `getMovements(params)`       | Lista paginada de movimientos con renglones  |
 | POST   | `/movements`      | `createMovement(input)`      | Registra un movimiento y ajusta el stock    |
 
+Los cinco trabajan solo con los datos de la tienda de la sesión (D17, D18). Un producto de otra tienda responde
+**404** `PRODUCT_NOT_FOUND`, igual que uno que no existe (D19).
+
 No existen (todavía): editar o borrar productos, detalle de un movimiento, reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
 
 ---
@@ -37,18 +42,17 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 ## Sesión (fase 2): en construcción en la API
 
 > El frontend ya usa este contrato (`src/services/api/auth.ts`, `src/types/auth.ts`, `src/auth/`).
-> Estado en la API (2026-11-09): `POST /auth/google` existe (happy path, sin manejo de errores todavía) y
-> `GET /me` existe (`MeController`, en `modules/users`). `/auth/logout` aún responde 404, así que "Cerrar sesión"
-> muestra "No se pudo cerrar sesión".
+> Estado en la API (2026-11-11): `POST /auth/google`, `GET /me` y `POST /stores` existen y responden errores de
+> dominio. `/auth/logout` aún responde 404, así que "Cerrar sesión" muestra "No se pudo cerrar sesión".
 > Diseño en D20 a D24 de [`modelo-de-datos.md`](../../api/docs/modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google).
 > Cuando la API termine cada endpoint, verifica contra el controller y mueve su fila a la tabla de arriba.
 
 | Método | Ruta            | Función del cliente          | Estado en la API | Descripción                                          |
 |--------|-----------------|------------------------------|------------------|------------------------------------------------------|
-| POST   | `/auth/google`  | `loginWithGoogle({ credential })` | Existe      | Verifica el ID token de Google, pone la cookie de sesión y responde **204** sin body |
+| POST   | `/auth/google`  | `loginWithGoogle({ credential })` | Existe      | Verifica el ID token de Google, pone la cookie de sesión y responde **204** sin body. Público |
 | POST   | `/auth/logout`  | `logout()`                   | Pendiente        | Revoca la sesión y borra la cookie                   |
-| GET    | `/me`           | `getMe()`                    | Existe           | Persona de la sesión y su tienda; **401** sin sesión |
-| POST   | `/stores`       | `createStore(input)`         | Existe           | Crea la tienda de la persona de la sesión; **409** si ya tiene una |
+| GET    | `/me`           | `getMe()`                    | Existe           | Persona de la sesión y su tienda; **401** `SESSION_NOT_FOUND` sin sesión |
+| POST   | `/stores`       | `createStore(input)`         | Existe           | Crea la tienda de la persona de la sesión; **409** `USER_HAS_STORE` si ya tiene una |
 
 - **Cookie que pone `POST /auth/google`** (`AuthController`): nombre `session`, `HttpOnly`, `Secure`,
   `SameSite=Strict` y `Expires` igual a la expiración de la sesión en la base (hoy 1 día, provisional: P16). Sin `Domain`,
@@ -59,10 +63,21 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 - **CORS**: con credenciales el navegador rechaza `Access-Control-Allow-Origin: *`. La API ya permite solo
   `http://localhost:4200` con `credentials: true` (`main.ts`). Con `pnpm dev:lan` (`VITE_API_URL=/api`) las
   peticiones pasan por el proxy de Vite y son del mismo origen, así que no aplica.
-- **401 en cualquier endpoint** = sesión vencida o revocada: el frontend manda a `/iniciar-sesion` y después regresa
-  a la pantalla pedida.
+- **401 `SESSION_NOT_FOUND` en cualquier endpoint** (sin cookie, sesión vencida o revocada): `http.ts` avisa a
+  `AuthProvider`, que manda a `/iniciar-sesion` y después regresa a la pantalla pedida. Si la persona ya estaba adentro,
+  `/iniciar-sesion` le dice que su sesión terminó. Excepción: el 401 de `POST /auth/google` lo maneja la propia pantalla.
+- **403 `USER_DONT_HAVE_STORE`** en `/products` o `/movements`: `http.ts` avisa a `AuthProvider`, que quita la tienda
+  de la persona y `<RequireStore>` manda a `/registrar-tienda`. En la práctica no debería pasar, porque el frontend no
+  entra a esas pantallas sin tienda; cubre el caso de una tienda borrada con la sesión abierta.
 - `POST /auth/google` responde `204` sin body: el frontend llama después a `GET /me` (decisión en la tabla 8.6 de
-  `modelo-de-datos.md`). Si la credencial no es válida, se espera **401** (la API todavía no maneja ese error).
+  `modelo-de-datos.md`). Errores:
+
+  | Respuesta                               | Cuándo                                                       | Qué muestra `/iniciar-sesion` |
+  |-----------------------------------------|--------------------------------------------------------------|-------------------------------|
+  | 401 `USER_INFO_NOT_FOUND_ON_GOOGLE`     | Cuenta nueva cuyo perfil de Google no trae nombre o correo   | Que los agregue en Google o entre con otra cuenta |
+  | 401 `SESSION_NOT_FOUND`                 | Google validó el token pero no devolvió datos (`payload` vacío) | Que lo intente otra vez |
+  | 500                                     | ID token inválido, vencido o de otra app (ver discrepancia 5) | Que el servidor tuvo un problema |
+  | `204`, pero `GET /me` responde 401      | El navegador no guardó la cookie (CORS, `SameSite`, cookies bloqueadas) | Que revise si bloquea cookies |
 
 `POST /auth/google`, body (`GoogleLoginInput`, igual que `GoogleLoginDto` de la API):
 
@@ -70,8 +85,7 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 { "credential": "<ID token (JWT) del botón de Google Identity Services>" }
 ```
 
-`GET /me`, respuesta (`CurrentUser`). Lee la cookie `session`; sin cookie o con una sesión inválida responde **401**
-(`"Sesión no encontrada"`):
+`GET /me`, respuesta (`CurrentUser`). Sin cookie o con una sesión inválida responde **401** `SESSION_NOT_FOUND`:
 
 ```json
 {
@@ -81,20 +95,17 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
   "avatarUrl": "https://lh3.googleusercontent.com/...",
   "store": {
     "id": "01a3...",
-    "ownerId": "01a2...",
     "name": "Stickers del bazar",
     "address": "Bazar de la colonia, puesto 12",
     "phone": "+52 55 1234 5678",
     "description": null,
-    "contactEmail": null,
-    "createdAt": "2026-11-09T18:00:00.000Z",
-    "deletedAt": null
+    "contactEmail": null
   }
 }
 ```
 
-`store` trae todas las columnas de `Store` (tipo `Store` en `src/types/store.ts`), y es `null` si la persona aún no
-registra su tienda (D16). En ese caso `<RequireStore>` manda a `/registrar-tienda` antes de cualquier otra pantalla.
+`store` trae solo los datos del negocio (`StoreInfo` en `src/types/store.ts`, igual que `StoreInfo` de la API), y es
+`null` si la persona aún no registra su tienda (D16). En ese caso `<RequireStore>` manda a `/registrar-tienda` antes de cualquier otra pantalla.
 
 `POST /stores` (`StoresController`, detrás del `AuthGuard` global: **401** sin sesión). Body (`CreateStoreInput`,
 igual que `CreateStoreDto`):
@@ -107,9 +118,11 @@ igual que `CreateStoreDto`):
 | `description`  | string | no        |                          |
 | `contactEmail` | string | no        | Correo válido (`@IsEmail`) |
 
-- Respuesta: la `Store` creada (mismas columnas que en `GET /me`).
-- **409** `{ "statusCode": 409, "message": "El usuario ya tiene una tienda" }`, sin `errorCode`. El frontend vuelve a
-  pedir `GET /me` y, si ya hay tienda, sigue con ella.
+- Respuesta: la `Store` creada con todas sus columnas (`Store` en `src/types/store.ts`: `StoreInfo` más `ownerId`,
+  `createdAt` y `deletedAt`).
+- **409** `USER_HAS_STORE`: la persona ya tiene una tienda (I14), por ejemplo si la registró en otro dispositivo. El
+  frontend vuelve a pedir `GET /me` y sigue con la tienda que ya existe.
+- **400** si falla la validación del DTO.
 - El formulario además pide al menos 8 dígitos en el teléfono; la API no lo valida.
 
 Configuración: `VITE_GOOGLE_CLIENT_ID` en `apps/web/.env` (público; es el mismo Client ID que la API usa para validar `aud`, D23).
@@ -281,10 +294,14 @@ Todas las respuestas de error tienen `statusCode` y `message`. Tipos en `src/typ
 { "statusCode": 409, "message": "No hay stock suficiente del producto: Sticker", "errorCode": "INSUFFICIENT_STOCK" }
 ```
 
-| `errorCode`          | Status | Cuándo                                      |
-|----------------------|--------|---------------------------------------------|
-| `PRODUCT_NOT_FOUND`  | 404    | El producto no existe o está borrado        |
-| `INSUFFICIENT_STOCK` | 409    | Una salida pide más unidades de las que hay |
+| `errorCode`                     | Status | Cuándo                                                        | Quién lo maneja en el frontend |
+|---------------------------------|--------|---------------------------------------------------------------|--------------------------------|
+| `PRODUCT_NOT_FOUND`             | 404    | El producto no existe, está borrado o es de otra tienda (D19) | Cada pantalla que lo pide     |
+| `INSUFFICIENT_STOCK`            | 409    | Una salida pide más unidades de las que hay                   | Venta y `/registrar-movimiento` |
+| `SESSION_NOT_FOUND`             | 401    | Sin cookie, o la sesión venció o se revocó                    | `http.ts` → `AuthProvider` (global) |
+| `USER_INFO_NOT_FOUND_ON_GOOGLE` | 401    | `POST /auth/google` con un perfil sin nombre o correo         | `/iniciar-sesion`             |
+| `USER_HAS_STORE`                | 409    | `POST /stores` cuando la persona ya tiene tienda              | `/registrar-tienda`           |
+| `USER_DONT_HAVE_STORE`          | 403    | `/products` o `/movements` sin tienda                         | `http.ts` → `AuthProvider` (global) |
 
 **Error de validación** (`ValidationPipe` de NestJS), `message` es un arreglo:
 
@@ -293,6 +310,12 @@ Todas las respuestas de error tienen `statusCode` y `message`. Tipos en `src/typ
 ```
 
 **Cualquier otro error:** `500` genérico `{ "statusCode": 500, "message": "Internal server error" }`.
+
+**Sin respuesta** (sin internet o la API apagada): axios rechaza sin `response`.
+
+`getRequestFailure(error)` (`services/api/errors.ts`) clasifica el fallo en `offline`, `server` (5xx), `rejected` (4xx)
+o `unknown`, y `failedMessage('No se pudo …', error)` (`utils/requestErrors.ts`) agrega qué hacer: revisar la
+conexión, o esperar porque el servidor tuvo un problema. Úsalo en vez de escribir "Revisa tu conexión" para todo.
 
 ---
 
@@ -311,7 +334,9 @@ ni "compenses" estos comportamientos en la UI sin preguntar; repórtalos.
 4. **Fechas sin hora completa:** `@IsISO8601` acepta `2026-10-26` y `2026-10-26T10:00:00` (sin zona horaria), pero
    Prisma solo acepta fecha y hora con zona, así que `GET /movements` responde 500 en lugar de 400. `occurredAt` en
    `POST /movements` pasa la misma validación. Manda siempre `toISOString()`.
-5. **`POST /stores` responde 409 ante cualquier error:** el `catch` del controller convierte todo (también un fallo de
-   la base de datos) en "El usuario ya tiene una tienda". Por eso el frontend confirma con `GET /me` antes de dar por
-   hecho que la tienda existe. Propuesta: que el service lance un error de dominio (`STORE_ALREADY_EXISTS`, 409) y que
-   el controller no atrape lo demás.
+5. **Un ID token inválido en `POST /auth/google` responde 500:** `verifyIdToken` lanza un `Error` común (firma,
+   expiración o `aud` incorrectos) que no se convierte en error de dominio. El diseño espera **401**. El frontend lo
+   muestra como problema del servidor. Propuesta: atrapar el error de `verifyIdToken` en `AuthService` y lanzar un
+   error de dominio (por ejemplo `INVALID_GOOGLE_CREDENTIAL`, 401).
+6. **`SESSION_NOT_FOUND` también se usa cuando Google no devuelve `payload`** en `POST /auth/google`. No es una sesión
+   que falte, sino una credencial sin datos; un código propio permitiría un mensaje más preciso.

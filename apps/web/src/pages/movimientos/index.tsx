@@ -23,6 +23,7 @@ import {
   typeFilterLabel,
   type Filters,
 } from './filters';
+import { failedMessage } from '../../utils/requestErrors';
 
 const PER_PAGE = 20;
 const PAGE_PARAM = 'pagina';
@@ -268,7 +269,7 @@ export function MovementsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Acordeón: un solo movimiento abierto. Lo comparten la lista y la tabla para que coincidan al girar el iPad.
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { status, data, refetch } = useQuery(`movements:${page}:${filtersKey(filters)}`, (signal) =>
+  const { status, data, error, refetch } = useQuery(`movements:${page}:${filtersKey(filters)}`, (signal) =>
     getMovements({ page, perPage: PER_PAGE, ...toApiFilters(filters) }, { signal }),
   );
 
@@ -299,7 +300,7 @@ export function MovementsPage() {
       {status === 'loading' && !data && <LoadingRows />}
 
       {status === 'error' && (
-        <ErrorPanel message="No se pudieron cargar los movimientos. Revisa tu conexión e inténtalo otra vez." onRetry={refetch} />
+        <ErrorPanel message={failedMessage('No se pudieron cargar los movimientos.', error)} onRetry={refetch} />
       )}
 
       {status !== 'error' && data && filtered && page === 1 && data.data.length === 0 && (

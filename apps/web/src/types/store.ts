@@ -1,14 +1,18 @@
 // Tienda (fase 2, D16). Ver "Tiendas" en docs/api.md.
 
-// Todas las columnas de Store, tal como las devuelven GET /me y POST /stores.
-export interface Store {
+// La tienda tal como viene en GET /me (StoreInfo de la API): solo los datos del negocio.
+export interface StoreInfo {
   id: string;
-  ownerId: string;
   name: string;
   address: string;
   phone: string;
   description: string | null;
   contactEmail: string | null;
+}
+
+// Respuesta de POST /stores: todas las columnas de Store.
+export interface Store extends StoreInfo {
+  ownerId: string;
   createdAt: string;
   deletedAt: string | null;
 }

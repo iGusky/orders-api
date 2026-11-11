@@ -1,19 +1,31 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { isAxiosError } from 'axios';
-import { getMe, loginWithGoogle, logout, onUnauthorized } from '../services/api';
+import {
+  getApiErrorBody,
+  getMe,
+  getRequestFailure,
+  loginWithGoogle,
+  logout,
+  onStoreRequired,
+  onUnauthorized,
+} from '../services/api';
 import { disableGoogleAutoSelect } from '../services/googleIdentity';
-import type { Store } from '../types/store';
-import { AuthContext, type AuthContextValue, type AuthState } from './AuthContext';
+import type { StoreInfo } from '../types/store';
+import { AuthContext, SessionNotSavedError, type AuthContextValue, type AuthState } from './AuthContext';
 
 // El frontend nunca ve la sesión: vive en una cookie httpOnly (D22). Solo pregunta a GET /me quién es la persona.
+// Sin sesión, GET /me responde 401 SESSION_NOT_FOUND.
 async function fetchAuthState(signal?: AbortSignal): Promise<AuthState> {
   try {
     const user = await getMe({ signal });
     return { status: 'authenticated', user };
   } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 401) return { status: 'anonymous' };
+    if (getApiErrorBody(error)?.statusCode === 401) return { status: 'anonymous' };
     throw error;
   }
+}
+
+function errorState(error: unknown): AuthState {
+  return { status: 'error', failure: getRequestFailure(error) };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -23,29 +35,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     fetchAuthState(controller.signal)
       .then(setState)
-      .catch(() => {
-        if (!controller.signal.aborted) setState({ status: 'error' });
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setState(errorState(error));
       });
     return () => controller.abort();
   }, []);
 
-  // Cualquier 401 (sesión vencida o revocada) manda a iniciar sesión.
-  useEffect(() => onUnauthorized(() => setState({ status: 'anonymous' })), []);
+  // Cualquier 401 (sesión vencida o revocada) manda a iniciar sesión. Si había alguien adentro, se le avisa por qué.
+  useEffect(
+    () =>
+      onUnauthorized(() =>
+        setState((current) => ({ status: 'anonymous', expired: current.status === 'authenticated' })),
+      ),
+    [],
+  );
+
+  // 403 USER_DONT_HAVE_STORE: la API ya no encuentra la tienda (por ejemplo, se borró). <RequireStore> manda al alta.
+  useEffect(
+    () =>
+      onStoreRequired(() =>
+        setState((current) =>
+          current.status === 'authenticated' ? { status: 'authenticated', user: { ...current.user, store: null } } : current,
+        ),
+      ),
+    [],
+  );
 
   const refresh = useCallback(async () => {
     setState({ status: 'loading' });
     try {
       setState(await fetchAuthState());
-    } catch {
-      setState({ status: 'error' });
+    } catch (error) {
+      setState(errorState(error));
     }
   }, []);
 
   const signIn = useCallback(async (credential: string) => {
     await loginWithGoogle({ credential });
     const next = await fetchAuthState();
-    // La API aceptó el token pero GET /me no reconoce la sesión: la cookie no se guardó (CORS, SameSite).
-    if (next.status !== 'authenticated') throw new Error('La sesión no quedó guardada en el navegador');
+    if (next.status !== 'authenticated') throw new SessionNotSavedError();
     setState(next);
   }, []);
 
@@ -55,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'anonymous' });
   }, []);
 
-  const setStore = useCallback((store: Store) => {
+  const setStore = useCallback((store: StoreInfo) => {
     setState((current) =>
       current.status === 'authenticated' ? { status: 'authenticated', user: { ...current.user, store } } : current,
     );

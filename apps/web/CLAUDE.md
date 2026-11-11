@@ -61,22 +61,23 @@ src/
     SignOutButton.tsx   # Botón de icono para cerrar sesión
   auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
     AuthContext.ts      # AuthState, useAuth, useCurrentUser, useCurrentStore
-    AuthProvider.tsx    # Carga GET /me, signIn, signOut; un 401 en cualquier petición pasa a "sin sesión"
+    AuthProvider.tsx    # Carga GET /me, signIn, signOut; un 401 pasa a "sin sesión" y un 403 USER_DONT_HAVE_STORE al alta de tienda
     RequireAuth.tsx     # Ruta de layout: sin sesión redirige a /iniciar-sesion y luego regresa
     RequireStore.tsx    # Ruta de layout (dentro de RequireAuth): sin tienda redirige a /registrar-tienda y luego regresa
   hooks/useQuery.ts     # Carga de datos con cancelación y reintento
   hooks/useDebouncedValue.ts
   hooks/useTheme.ts     # Tema claro/oscuro: lo aplica, lo guarda y sigue al dispositivo si no hay elección
   services/api/         # Cliente de la API: una función por endpoint
-    http.ts             # Instancia de axios (baseURL = VITE_API_URL, withCredentials) y aviso de 401
+    http.ts             # Instancia de axios (baseURL = VITE_API_URL, withCredentials) y avisos de 401 y 403 sin tienda
     products.ts         # getProducts, getProductById, createProduct
     movements.ts        # getMovements, createMovement
-    auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized
+    auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized, onStoreRequired
     stores.ts           # createStore
-    errors.ts           # getApiErrorBody, getDomainError
+    errors.ts           # getApiErrorBody, getDomainError, getRequestFailure (offline / server / rejected)
   services/googleIdentity.ts # Carga el script de Google Identity Services (solo en /iniciar-sesion)
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
   utils/money.ts        # pesosToCents, parsePesos, formatCents, centsToInput
+  utils/requestErrors.ts # failedMessage, retryHint: qué hacer cuando falla una petición (sin red o error del servidor)
   utils/dates.ts        # formatTime, formatDay ("Hoy", "Ayer", "Lunes, 26 de octubre"), dayKey
   utils/movements.ts    # Texto, icono, signo de cantidad y conteo de productos de un movimiento
   utils/products.ts     # LOW_STOCK_THRESHOLD y stockStatus
@@ -90,6 +91,10 @@ src/
 - Un endpoint nuevo = función en `services/api/<recurso>.ts` + tipos en `src/types/<recurso>.ts` + fila en `docs/api.md`.
 - Los errores se distinguen por `errorCode` (`getDomainError(e)?.errorCode === 'INSUFFICIENT_STOCK'`), nunca por el texto de `message`.
   Los textos que ve el usuario los escribe el frontend.
+- Para el mensaje genérico de una petición fallida usa `failedMessage('No se pudo guardar el producto.', error)`: dice
+  "Revisa tu conexión" solo si no hubo respuesta, y "el servidor tuvo un problema" si fue un 5xx. `useQuery` expone `error`.
+- 401 `SESSION_NOT_FOUND` y 403 `USER_DONT_HAVE_STORE` se manejan de forma global (`http.ts` → `AuthProvider`):
+  las pantallas no los tratan.
 - Toda pantalla que llama a la API maneja tres estados: cargando, error y vacío.
 - Para leer datos usa `useQuery(key, (signal) => getX(..., { signal }))` de `src/hooks/useQuery.ts`: cancela la petición
   anterior y conserva los datos previos mientras carga (atenúa la lista con `opacity-60` en lugar de mostrar el esqueleto otra vez).
