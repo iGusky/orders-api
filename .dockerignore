@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.nx
+.git
+.github
+.claude
+.vscode
+bruno
+apps/api/generated
+**/coverage
+**/test-output
