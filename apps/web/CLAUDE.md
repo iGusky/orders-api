@@ -59,6 +59,7 @@ src/
     ThemeToggle.tsx     # Botón para alternar entre tema claro y oscuro
     GoogleSignInButton.tsx # Botón de Google Identity Services; entrega el ID token
     SignOutButton.tsx   # Botón de icono para cerrar sesión
+    AppFooter.tsx       # Créditos del autor; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda)
   auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
     AuthContext.ts      # AuthState, useAuth, useCurrentUser, useCurrentStore
     AuthProvider.tsx    # Carga GET /me, signIn, signOut; un 401 pasa a "sin sesión" y un 403 USER_DONT_HAVE_STORE al alta de tienda
