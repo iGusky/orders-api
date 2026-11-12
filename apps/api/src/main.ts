@@ -9,10 +9,19 @@ async function bootstrap() {
     transform: true
   }))
 
+  // CORS_ORIGIN: orígenes permitidos separados por coma (en producción, https://bazar.gushm.dev).
+  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:4200')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: "http://localhost:4200",
+    origin: corsOrigins,
     credentials: true
   })
+
+  // Cierra conexiones (Prisma) cuando Docker/Dokploy detiene el contenedor (SIGTERM).
+  app.enableShutdownHooks()
 
   app.use(cookieParser())
 
