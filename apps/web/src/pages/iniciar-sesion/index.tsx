@@ -6,6 +6,7 @@ import type { SignInLocationState } from '../../auth/RequireAuth';
 import { ErrorPanel } from '../../components/ErrorPanel';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { AppFooter } from '../../components/AppFooter';
 import { getDomainError } from '../../services/api';
 import { failedMessage } from '../../utils/requestErrors';
 
@@ -83,6 +84,8 @@ export function SignInPage() {
           </div>
         )}
       </section>
+
+      <AppFooter />
     </main>
   );
 }

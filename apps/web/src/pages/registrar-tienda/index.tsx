@@ -4,6 +4,7 @@ import { useAuth, useCurrentUser } from '../../auth/AuthContext';
 import type { CreateStoreLocationState } from '../../auth/RequireStore';
 import { SignOutButton } from '../../components/SignOutButton';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { AppFooter } from '../../components/AppFooter';
 import { CreateStoreForm } from './CreateStoreForm';
 
 // Alta de la tienda (D16). <RequireStore> manda aquí a quien todavía no tiene una; al registrarla regresa
@@ -19,7 +20,7 @@ export function CreateStorePage() {
   const firstName = user.name.split(' ')[0];
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pt-safe pb-safe md:px-6">
+    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-4 pt-safe pb-safe md:px-6">
       <header className="mt-8 flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-2">
           <StoreIcon className="size-8 text-ink-muted" aria-hidden />
@@ -36,6 +37,8 @@ export function CreateStorePage() {
       </header>
 
       <CreateStoreForm onCreated={setStore} onAlreadyRegistered={refresh} />
+
+      <AppFooter />
     </main>
   );
 }
