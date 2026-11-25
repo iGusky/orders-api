@@ -339,11 +339,12 @@ interface MovementRowProps {
   quantity: string;
   amountCents: number;
   product: string;
+  author: string | null;   // null: lo registró la persona actual
   expanded: boolean;
   onToggle: () => void;
 }
 
-function MovementRow({ icon: Icon, type, date, quantity, amountCents, product, expanded, onToggle }: MovementRowProps) {
+function MovementRow({ icon: Icon, type, date, quantity, amountCents, product, author, expanded, onToggle }: MovementRowProps) {
   return (
     <div className="rounded-md border border-line bg-surface">
       <button
@@ -353,23 +354,27 @@ function MovementRow({ icon: Icon, type, date, quantity, amountCents, product, e
         onClick={onToggle}
       >
         <Icon className="size-5 shrink-0 text-ink-muted" aria-hidden />
-        <span className="flex flex-1 flex-col">
+        <span className="flex min-w-0 flex-1 flex-col">
           <span>{type}</span>
           <span className="tabular flex gap-3 text-sm text-ink-muted">
             <span>{date}</span>
             <span>{productCountLabel(1)}</span>
+            {author && <span className="truncate">{author}</span>}
           </span>
         </span>
         {amountCents > 0 && <span className="tabular font-semibold">{formatCents(amountCents)}</span>}
         <ChevronDown className={`size-5 shrink-0 text-ink-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} aria-hidden />
       </button>
       {expanded && (
-        <div className="flex items-baseline gap-3 border-t border-line px-4 py-3">
-          <span className="flex-1">{product}</span>
-          <span className="tabular min-w-12 text-right">{quantity}</span>
-          <span className="min-w-24 text-right">
-            {amountCents > 0 && <span className="tabular font-semibold">{formatCents(amountCents)}</span>}
-          </span>
+        <div className="flex flex-col gap-3 border-t border-line px-4 py-3">
+          <div className="flex items-baseline gap-3">
+            <span className="flex-1">{product}</span>
+            <span className="tabular min-w-12 text-right">{quantity}</span>
+            <span className="min-w-24 text-right">
+              {amountCents > 0 && <span className="tabular font-semibold">{formatCents(amountCents)}</span>}
+            </span>
+          </div>
+          <p className="text-sm text-ink-muted">Registrado por {author ?? 'ti'}</p>
         </div>
       )}
     </div>
@@ -382,9 +387,9 @@ function MovementsDemo() {
   return (
     <Demo title="Lista de movimientos">
       <div className="flex flex-col gap-3">
-        <MovementRow icon={ShoppingBag} type="Venta" date="29 oct, 14:30" quantity="−5" amountCents={4500} product="Sticker" expanded={expanded === 'venta'} onToggle={() => toggle('venta')} />
-        <MovementRow icon={PackagePlus} type="Reabastecimiento" date="29 oct, 09:10" quantity="+12" amountCents={0} product="Pin esmaltado" expanded={expanded === 'reabastecimiento'} onToggle={() => toggle('reabastecimiento')} />
-        <MovementRow icon={SlidersHorizontal} type="Ajuste" date="28 oct, 19:45" quantity="+45" amountCents={0} product="Llavero de barro" expanded={expanded === 'ajuste'} onToggle={() => toggle('ajuste')} />
+        <MovementRow icon={ShoppingBag} type="Venta" date="29 oct, 14:30" quantity="−5" amountCents={4500} product="Sticker" author="Ana" expanded={expanded === 'venta'} onToggle={() => toggle('venta')} />
+        <MovementRow icon={PackagePlus} type="Reabastecimiento" date="29 oct, 09:10" quantity="+12" amountCents={0} product="Pin esmaltado" author={null} expanded={expanded === 'reabastecimiento'} onToggle={() => toggle('reabastecimiento')} />
+        <MovementRow icon={SlidersHorizontal} type="Ajuste" date="28 oct, 19:45" quantity="+45" amountCents={0} product="Llavero de barro" author={null} expanded={expanded === 'ajuste'} onToggle={() => toggle('ajuste')} />
       </div>
     </Demo>
   );

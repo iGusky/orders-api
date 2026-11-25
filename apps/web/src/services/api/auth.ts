@@ -1,7 +1,8 @@
 import { http } from './http';
 import type { CurrentUser, GoogleLoginInput } from '../../types/auth';
 
-export { onStoreRequired, onUnauthorized } from './http';
+export { getActiveStoreId, onStoreUnavailable, onUnauthorized, setActiveStoreId } from './http';
+export type { StoreUnavailableReason } from './http';
 
 // Cambia el ID token de Google por la sesión de la API. La cookie la pone la API; aquí no se lee (D22).
 export async function loginWithGoogle(input: GoogleLoginInput): Promise<void> {

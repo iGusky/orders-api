@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router';
-import { Boxes, ChevronRight, History, PackagePlus, ShoppingBag, SlidersHorizontal, type LucideIcon } from 'lucide-react';
+import { Boxes, ChevronRight, History, PackagePlus, ShoppingBag, SlidersHorizontal, Users, type LucideIcon } from 'lucide-react';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { SignOutButton } from '../../components/SignOutButton';
 import { AppFooter } from '../../components/AppFooter';
-import { useCurrentUser } from '../../auth/AuthContext';
+import { useCurrentStore, useCurrentUser } from '../../auth/AuthContext';
+import { StoreSwitcher } from '../../components/StoreSwitcher';
 
 interface MenuLinkProps {
   to: string;
@@ -27,6 +28,7 @@ function MenuLink({ to, icon: Icon, children }: MenuLinkProps) {
 
 export function Home() {
   const user = useCurrentUser();
+  const { role } = useCurrentStore();
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-4 pt-safe pb-safe">
       <header className="mt-8 flex items-center justify-between gap-3">
@@ -40,6 +42,8 @@ export function Home() {
         </div>
       </header>
 
+      <StoreSwitcher />
+
       <NavLink
         to="/registrar-venta"
         end
@@ -51,9 +55,12 @@ export function Home() {
 
       <nav aria-label="Secciones" className="flex flex-col gap-3">
         <MenuLink to="/agregar-stock" icon={PackagePlus}>Agregar stock</MenuLink>
-        <MenuLink to="/registrar-movimiento" icon={SlidersHorizontal}>Devolución, merma o ajuste</MenuLink>
+        <MenuLink to="/registrar-movimiento" icon={SlidersHorizontal}>
+          {role === 'OWNER' ? 'Devolución, merma o ajuste' : 'Devolución o merma'}
+        </MenuLink>
         <MenuLink to="/movimientos" icon={History}>Movimientos</MenuLink>
         <MenuLink to="/inventario" icon={Boxes}>Inventario</MenuLink>
+        {role === 'OWNER' && <MenuLink to="/equipo" icon={Users}>Equipo</MenuLink>}
       </nav>
 
       <AppFooter />
