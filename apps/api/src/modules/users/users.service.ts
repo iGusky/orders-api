@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { TransactionHost } from '@nestjs-cls/transactional';
-import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { normalizeEmail } from '../../common/utils/index.js';
 
 @Injectable()
 export class UsersService {
@@ -32,8 +31,21 @@ export class UsersService {
     });
   }
 
-  
-
+  // Usuario activo con ese correo (RF1). User.email no es único (D20): si hay varios, el que inició sesión más
+  // recientemente (P18). Compara sin distinguir mayúsculas porque los correos viejos pueden no estar normalizados.
+  async findMostRecentUserByEmail(email: string) {
+    const latestSession = await this.prisma.session.findFirst({
+      where: {
+        user: {
+          email: { equals: normalizeEmail(email), mode: 'insensitive' },
+          deletedAt: null,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+    });
+    return latestSession?.user ?? null;
+  }
 
   async createUser(data: {
     email: string;
@@ -43,7 +55,7 @@ export class UsersService {
   }) {
     const response = await this.prisma.user.create({
       data: {
-        email: data.email.trim(),
+        email: normalizeEmail(data.email),
         name: data.name.trim(),
         googleSub: data.googleSub,
         avatarUrl: data.picture ?? null,

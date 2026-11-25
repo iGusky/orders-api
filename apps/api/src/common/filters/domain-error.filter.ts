@@ -30,5 +30,12 @@ const domainErrorToHttpCode: Record<DomainErrorCode, HttpStatus> = {
   [DomainErrorCode.SessionNotFound]: HttpStatus.UNAUTHORIZED,
   [DomainErrorCode.UserInfoNotFoundOnGoogle]: HttpStatus.UNAUTHORIZED,
   [DomainErrorCode.UserAlreadyHasStore]: HttpStatus.CONFLICT,
-  [DomainErrorCode.StoreRequiredError]: HttpStatus.FORBIDDEN,
+  [DomainErrorCode.StoreNotSelected]: HttpStatus.BAD_REQUEST,
+  [DomainErrorCode.StoreNotFound]: HttpStatus.NOT_FOUND,
+  [DomainErrorCode.RoleNotAllowed]: HttpStatus.FORBIDDEN,
+  [DomainErrorCode.MemberAlreadyExists]: HttpStatus.CONFLICT,
+  [DomainErrorCode.InvitationAlreadyExists]: HttpStatus.CONFLICT,
+  [DomainErrorCode.MemberNotFound]: HttpStatus.NOT_FOUND,
+  [DomainErrorCode.InvitationNotFound]: HttpStatus.NOT_FOUND,
+  [DomainErrorCode.CannotRemoveOwner]: HttpStatus.CONFLICT,
 };
