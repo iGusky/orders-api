@@ -59,7 +59,7 @@ src/
     ThemeToggle.tsx     # Botón para alternar entre tema claro y oscuro
     GoogleSignInButton.tsx # Botón de Google Identity Services; entrega el ID token
     SignOutButton.tsx   # Botón de icono para cerrar sesión
-    AppFooter.tsx       # Créditos del autor y versión del build; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda)
+    AppFooter.tsx       # Créditos del autor y versión del build; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda, créditos); enlaza a `/creditos`
     StoreList.tsx       # Tiendas de la persona con su rol; la activa con palomita
     StoreSwitcher.tsx   # Tienda activa en el inicio y hoja para cambiarla (solo desde el inicio)
   auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
@@ -111,7 +111,7 @@ src/
   anterior y conserva los datos previos mientras carga (atenúa la lista con `opacity-60` en lugar de mostrar el esqueleto otra vez).
   `key` debe incluir todo lo que cambia la petición.
 - Toda pantalla nueva va dentro de `<Route element={<RequireAuth />}>` y de `<Route element={<RequireStore />}>` en
-  `main.tsx`, salvo que sea pública a propósito (hoy solo `/iniciar-sesion`) o sea el alta o la elección de tienda
+  `main.tsx`, salvo que sea pública a propósito (hoy `/iniciar-sesion` y `/creditos`) o sea el alta o la elección de tienda
   (`/registrar-tienda`, `/elegir-tienda`). Dentro de esas pantallas, la persona se lee con `useCurrentUser()` y la
   tienda activa, con su rol, con `useCurrentStore()`.
 - La página actual y la búsqueda de una lista viven en la URL (`?pagina=2&buscar=pin`) para que funcione el botón atrás.

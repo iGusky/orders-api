@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { Heart } from 'lucide-react';
 import { formatAppVersion } from '../utils/appVersion';
 
@@ -27,6 +28,9 @@ export function AppFooter() {
         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={linkClasses}>
           GitHub
         </a>
+        <Link to="/creditos" className={linkClasses}>
+          Créditos
+        </Link>
       </nav>
       <p>© {year} Gus HM. Todos los derechos reservados.</p>
       <p className="tabular">
