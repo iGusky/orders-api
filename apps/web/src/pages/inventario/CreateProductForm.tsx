@@ -2,37 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { CircleAlert, Loader2 } from 'lucide-react';
 import { createProduct, getApiErrorBody } from '../../services/api';
 import type { Product } from '../../types/product';
-import { MAX_CENTS, parsePesos } from '../../utils/money';
+import { parsePesos } from '../../utils/money';
 import { failedMessage } from '../../utils/requestErrors';
-
-
-interface FormErrors {
-  name?: string;
-  price?: string;
-}
-
-function validate(name: string, price: string): FormErrors {
-  const errors: FormErrors = {};
-  if (name.trim() === '') errors.name = 'Escribe el nombre del producto.';
-
-  const priceCents = parsePesos(price);
-  if (price.trim() === '') errors.price = 'Escribe el precio de lista.';
-  else if (priceCents === null) errors.price = 'Escribe el precio con números, por ejemplo 45 o 45.50.';
-  else if (priceCents > MAX_CENTS) errors.price = 'El precio es demasiado alto.';
-  return errors;
-}
-
-const inputClasses = 'min-h-touch rounded-md border bg-background px-4';
-
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <span id={id} className="flex items-center gap-1 text-sm text-danger">
-      <CircleAlert className="size-4 shrink-0" aria-hidden />
-      {message}
-    </span>
-  );
-}
+import { ProductFields, validateProductFields, type ProductFieldValues } from './ProductFields';
 
 interface CreateProductFormProps {
   onCreated: (product: Product) => void;
@@ -40,27 +12,25 @@ interface CreateProductFormProps {
 }
 
 export function CreateProductForm({ onCreated, onCancel }: CreateProductFormProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
+  const [values, setValues] = useState<ProductFieldValues>({ name: '', price: '', description: '' });
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
-  const errors = submitted ? validate(name, price) : {};
+  const errors = submitted ? validateProductFields(values) : {};
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    if (Object.keys(validate(name, price)).length > 0 || saving) return;
+    if (Object.keys(validateProductFields(values)).length > 0 || saving) return;
 
     setSaving(true);
     setRequestError(null);
     try {
       const product = await createProduct({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        priceCents: parsePesos(price) ?? 0,
+        name: values.name.trim(),
+        description: values.description.trim() || undefined,
+        priceCents: parsePesos(values.price) ?? 0,
       });
       onCreated(product);
     } catch (error) {
@@ -75,57 +45,7 @@ export function CreateProductForm({ onCreated, onCancel }: CreateProductFormProp
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <label className="flex flex-col gap-1">
-        <span className="font-semibold">Nombre</span>
-        <input
-          className={`${inputClasses} ${errors.name ? 'border-danger' : 'border-line'}`}
-          value={name}
-          autoFocus
-          autoComplete="off"
-          enterKeyHint="next"
-          placeholder="Paquete de 5 stickers"
-          aria-invalid={Boolean(errors.name)}
-          aria-describedby={errors.name ? 'name-error' : undefined}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <FieldError id="name-error" message={errors.name} />
-      </label>
-
-      <label className="flex flex-col gap-1">
-        <span className="font-semibold">Precio de lista</span>
-        <span
-          className={`flex min-h-touch items-center rounded-md border bg-background px-4 focus-within:outline-3 focus-within:outline-primary ${errors.price ? 'border-danger' : 'border-line'}`}
-        >
-          <span className="text-ink-muted" aria-hidden>$</span>
-          <input
-            className="min-w-0 flex-1 bg-transparent px-1 py-2 outline-none"
-            inputMode="decimal"
-            autoComplete="off"
-            enterKeyHint="next"
-            placeholder="45.00"
-            value={price}
-            aria-invalid={Boolean(errors.price)}
-            aria-describedby={errors.price ? 'price-error' : 'price-help'}
-            onChange={(e) => setPrice(e.target.value)}
-          />
-        </span>
-        <FieldError id="price-error" message={errors.price} />
-        {!errors.price && (
-          <span id="price-help" className="text-sm text-ink-muted">Sirve para sugerir el importe al vender; en cada venta lo puedes cambiar.</span>
-        )}
-      </label>
-
-      <label className="flex flex-col gap-1">
-        <span className="font-semibold">
-          Descripción <span className="font-normal text-ink-muted">(opcional)</span>
-        </span>
-        <textarea
-          className={`${inputClasses} border-line py-3`}
-          rows={2}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </label>
+      <ProductFields values={values} errors={errors} onChange={setValues} autoFocusName />
 
       <p className="rounded-md bg-kraft p-3 text-sm">
         El producto empieza con 0 en stock. Para sumar unidades, registra un reabastecimiento.

@@ -1,6 +1,6 @@
 import { http } from './http';
 import type { PaginationParams } from '../../types/pagination';
-import type { CreateProductInput, PaginatedProducts, Product } from '../../types/product';
+import type { CreateProductInput, PaginatedProducts, Product, UpdateProductInput } from '../../types/product';
 
 export async function getProducts(
   params: PaginationParams,
@@ -17,5 +17,10 @@ export async function getProductById(id: string): Promise<Product> {
 
 export async function createProduct(input: CreateProductInput): Promise<Product> {
   const { data } = await http.post<Product>('/products', input);
+  return data;
+}
+
+export async function updateProduct(id: string, input: UpdateProductInput): Promise<Product> {
+  const { data } = await http.patch<Product>(`/products/${id}`, input);
   return data;
 }

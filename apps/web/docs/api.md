@@ -30,13 +30,14 @@
 | GET    | `/products`       | `getProducts(params)`        | Lista paginada de productos activos         |
 | GET    | `/products/:id`   | `getProductById(id)`         | Un producto activo                          |
 | POST   | `/products`       | `createProduct(input)`       | Alta de producto (stock inicial `0`)        |
+| PATCH  | `/products/:id`   | `updateProduct(id, input)`   | Edita nombre, precio y descripción (dueño)  |
 | GET    | `/movements`      | `getMovements(params)`       | Lista paginada de movimientos con renglones  |
 | POST   | `/movements`      | `createMovement(input)`      | Registra un movimiento y ajusta el stock    |
 
-Los cinco trabajan solo con los datos de la tienda activa (`X-Store-Id`, D17, D28). Un producto de otra tienda responde
+Los seis trabajan solo con los datos de la tienda activa (`X-Store-Id`, D17, D28). Un producto de otra tienda responde
 **404** `PRODUCT_NOT_FOUND`, igual que uno que no existe (D19).
 
-No existen (todavía): editar o borrar productos, detalle de un movimiento, reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
+No existen (todavía): borrar productos, detalle de un movimiento, reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
 
 ---
 
@@ -163,6 +164,7 @@ Configuración: `VITE_GOOGLE_CLIENT_ID` en `apps/web/.env` (público; es el mism
 |---------------------------------------------|:-------:|:----------:|----------------------------|
 | `GET /products`, `GET /movements`           |   sí    |     sí     |                            |
 | `POST /products`                            |   sí    |     sí     |                            |
+| `PATCH /products/:id`                       |   sí    |   **no**   | 403 `ROLE_NOT_ALLOWED`     |
 | `POST /movements` `SALE`, `RESTOCK`, `RETURN`, `SHRINKAGE` | sí | sí |                            |
 | `POST /movements` `ADJUSTMENT`              |   sí    |   **no**   | 403 `ROLE_NOT_ALLOWED`     |
 | Endpoints de equipo (abajo)                 |   sí    |     no     | 403 `ROLE_NOT_ALLOWED`     |
@@ -251,6 +253,25 @@ Body (`CreateProductInput`):
 
 - El stock **no** se manda: un producto nuevo nace con `stock: 0`. Para darle stock se registra un `RESTOCK`.
 - Respuesta: `Product` creado.
+
+### `PATCH /products/:id`
+
+Solo el dueño (D32). Body (`UpdateProductInput`), todos opcionales; solo cambia lo que se manda:
+
+| Campo         | Tipo           | Reglas                                   |
+|---------------|----------------|------------------------------------------|
+| `name`        | string         | No vacío; `null` no se acepta            |
+| `description` | string \| null | `null` borra la descripción              |
+| `priceCents`  | entero         | `0..2147483647`; `null` no se acepta     |
+
+- El stock **no** se edita: si viene `stock` en el body, se ignora. Solo cambia con movimientos.
+- `id` debe ser UUID; si no, **400**. Borrado o de otra tienda: **404** `PRODUCT_NOT_FOUND`. Empleado: **403** `ROLE_NOT_ALLOWED`.
+- Respuesta: `Product` actualizado (con el `stock` actual).
+- Efectos que la UI debe advertir antes de guardar:
+  - **Nombre:** los movimientos guardan el `productId`, no el nombre. El nombre nuevo se ve en todo el historial de
+    movimientos, en los selectores de producto y en el inventario.
+  - **Precio:** no cambia ningún movimiento registrado (cada renglón tiene su `lineTotalCents`); solo se sugiere en
+    ventas nuevas.
 
 `Product`:
 
@@ -381,7 +402,7 @@ Todas las respuestas de error tienen `statusCode` y `message`. Tipos en `src/typ
 | `USER_HAS_STORE`                | 409    | `POST /stores` cuando la persona ya tiene tienda              | `/registrar-tienda`           |
 | `STORE_NOT_SELECTED`            | 400    | Endpoint de tienda sin `X-Store-Id`                            | `http.ts` → `AuthProvider` (global) |
 | `STORE_NOT_FOUND`               | 404    | `X-Store-Id` de una tienda a la que no pertenece (o borrada)  | `http.ts` → `AuthProvider` (global) |
-| `ROLE_NOT_ALLOWED`              | 403    | Un empleado intenta un `ADJUSTMENT` o un endpoint de equipo   | `/registrar-movimiento`        |
+| `ROLE_NOT_ALLOWED`              | 403    | Un empleado intenta un `ADJUSTMENT`, editar un producto o un endpoint de equipo | `/registrar-movimiento`, `/inventario` |
 
 **Error de validación** (`ValidationPipe` de NestJS), `message` es un arreglo:
 

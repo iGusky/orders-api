@@ -18,8 +18,15 @@ export class MovementItemService {
   ) {}
 
   @Transactional()
-  async createAndAppendItem(item: CreateMovementItemDto, movement: Movement, storeId: string) {
-    const product = await this.productsService.getProductById(item.productId, storeId);
+  async createAndAppendItem(
+    item: CreateMovementItemDto,
+    movement: Movement,
+    storeId: string,
+  ) {
+    const product = await this.productsService.getProductById(
+      item.productId,
+      storeId,
+    );
 
     if (
       movement.type == MovementType.SALE ||
@@ -46,16 +53,7 @@ export class MovementItemService {
       product.stock = product.stock + item.quantity;
     }
 
-    await this.productsService.updateProduct(
-      {
-        name: product.name,
-        description: product.description,
-        priceCents: product.priceCents,
-        stock: product.stock,
-      },
-      product.id,
-      storeId
-    );
+    await this.productsService.setStock(product.id, storeId, product.stock);
 
     const movementItem = await this.txHost.tx.movementItem.create({
       data: {

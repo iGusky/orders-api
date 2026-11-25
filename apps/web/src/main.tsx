@@ -18,6 +18,7 @@ import { CREATE_STORE_PATH, RequireStore, STORE_PICKER_PATH } from './auth/Requi
 import { CreateStorePage } from './pages/registrar-tienda';
 import { StorePickerPage } from './pages/elegir-tienda';
 import { TeamPage } from './pages/equipo';
+import { CreditsPage } from './pages/creditos';
 
 // TEMPORAL: guía de estilos, solo en desarrollo. Ver src/pages/estilos/index.tsx para eliminarla.
 const StyleGuide = import.meta.env.DEV ? lazy(() => import('./pages/estilos')) : null;
@@ -34,6 +35,8 @@ root.render(
     <BrowserRouter>
     <Routes>
       <Route path={SIGN_IN_PATH} element={<SignInPage />}/>
+      {/* Pública: se enlaza desde el pie de página, que también sale en /iniciar-sesion. */}
+      <Route path="/creditos" element={<CreditsPage />}/>
       {/* Todo lo de aquí dentro exige sesión (D21). */}
       <Route element={<RequireAuth />}>
         <Route path={CREATE_STORE_PATH} element={<CreateStorePage />}/>

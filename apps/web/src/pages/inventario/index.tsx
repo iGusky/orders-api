@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { Boxes, Plus, SearchX } from 'lucide-react';
+import { Boxes, Pencil, Plus, SearchX } from 'lucide-react';
+import { useCurrentStore } from '../../auth/AuthContext';
 import { BottomSheet } from '../../components/BottomSheet';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorPanel } from '../../components/ErrorPanel';
@@ -14,6 +15,7 @@ import { getProducts } from '../../services/api';
 import type { Product } from '../../types/product';
 import { formatCents } from '../../utils/money';
 import { CreateProductForm } from './CreateProductForm';
+import { EditProductForm } from './EditProductForm';
 import { failedMessage } from '../../utils/requestErrors';
 
 const PER_PAGE = 20;
@@ -34,21 +36,50 @@ function StockCount({ stock }: { stock: number }) {
   );
 }
 
-// Celular: lista
-function ProductList({ products }: { products: Product[] }) {
+// `onEdit` solo llega si la persona puede editar (dueño, D32).
+interface ProductRowsProps {
+  products: Product[];
+  onEdit?: (product: Product) => void;
+}
+
+function ProductSummary({ product }: { product: Product }) {
+  return (
+    <span className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="text-lg">{product.name}</span>
+      {product.description && <span className="truncate text-sm text-ink-muted">{product.description}</span>}
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="tabular text-sm text-ink-muted">{formatCents(product.priceCents)}</span>
+        <StockBadge stock={product.stock} />
+      </span>
+    </span>
+  );
+}
+
+const rowClasses = 'flex min-h-16 w-full items-center gap-3 rounded-md border border-line bg-surface px-4 py-3 text-left';
+
+// Celular: lista. Para el dueño, toda la fila abre la edición (docs/styles.md, 6.4).
+function ProductList({ products, onEdit }: ProductRowsProps) {
   return (
     <ul className="flex flex-col gap-2 md:hidden">
       {products.map((product) => (
-        <li key={product.id} className="flex min-h-16 items-center gap-3 rounded-md border border-line bg-surface px-4 py-3">
-          <span className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-lg">{product.name}</span>
-            {product.description && <span className="truncate text-sm text-ink-muted">{product.description}</span>}
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="tabular text-sm text-ink-muted">{formatCents(product.priceCents)}</span>
-              <StockBadge stock={product.stock} />
-            </span>
-          </span>
-          <StockCount stock={product.stock} />
+        <li key={product.id}>
+          {onEdit ? (
+            <button
+              type="button"
+              className={`${rowClasses} active:bg-primary-soft`}
+              onClick={() => onEdit(product)}
+            >
+              <ProductSummary product={product} />
+              <StockCount stock={product.stock} />
+              <Pencil className="size-5 shrink-0 text-ink-muted" aria-hidden />
+              <span className="sr-only">Editar</span>
+            </button>
+          ) : (
+            <div className={rowClasses}>
+              <ProductSummary product={product} />
+              <StockCount stock={product.stock} />
+            </div>
+          )}
         </li>
       ))}
     </ul>
@@ -56,7 +87,7 @@ function ProductList({ products }: { products: Product[] }) {
 }
 
 // iPad y escritorio: tabla
-function ProductTable({ products }: { products: Product[] }) {
+function ProductTable({ products, onEdit }: ProductRowsProps) {
   return (
     <div className="hidden overflow-hidden rounded-lg border border-line bg-surface md:block">
       <table className="w-full border-collapse text-left">
@@ -65,6 +96,7 @@ function ProductTable({ products }: { products: Product[] }) {
             <th scope="col" className="px-5 py-3 font-normal">Producto</th>
             <th scope="col" className="px-5 py-3 text-right font-normal">Precio de lista</th>
             <th scope="col" className="px-5 py-3 text-right font-normal">Stock</th>
+            {onEdit && <th scope="col" className="w-16 px-2 py-3"><span className="sr-only">Editar</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -83,6 +115,18 @@ function ProductTable({ products }: { products: Product[] }) {
                   <span className="tabular w-12 text-lg font-semibold">{product.stock}</span>
                 </span>
               </td>
+              {onEdit && (
+                <td className="px-2">
+                  <button
+                    type="button"
+                    className="grid size-touch place-items-center rounded-full active:bg-primary-soft"
+                    aria-label={`Editar ${product.name}`}
+                    onClick={() => onEdit(product)}
+                  >
+                    <Pencil className="size-5" aria-hidden />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -109,7 +153,10 @@ export function InventoryPage() {
   const page = parsePage(searchParams.get(PAGE_PARAM));
   const search = searchParams.get(SEARCH_PARAM) ?? '';
 
+  const { role } = useCurrentStore();
+  const canEdit = role === 'OWNER'; // D32: la API también rechaza a un empleado (403 ROLE_NOT_ALLOWED)
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const { status, data, error, refetch } = useQuery(`products:${page}:${search}`, (signal) =>
@@ -132,7 +179,14 @@ export function InventoryPage() {
   };
 
   const closeSheet = useCallback(() => setCreating(false), []);
+  const closeEdit = useCallback(() => setEditing(null), []);
   const dismissToast = useCallback(() => setToast(null), []);
+
+  const handleSaved = (product: Product) => {
+    setEditing(null);
+    setToast(`${product.name} actualizado`);
+    refetch();
+  };
 
   const handleCreated = (product: Product) => {
     setCreating(false);
@@ -197,8 +251,8 @@ export function InventoryPage() {
 
       {hasProducts && (
         <div aria-busy={status === 'loading'} className={`flex flex-col gap-6 ${status === 'loading' ? 'opacity-60' : ''}`}>
-          <ProductList products={data.data} />
-          <ProductTable products={data.data} />
+          <ProductList products={data.data} onEdit={canEdit ? setEditing : undefined} />
+          <ProductTable products={data.data} onEdit={canEdit ? setEditing : undefined} />
           <Pagination page={page} totalPages={data.totalPages} onChange={goToPage} />
         </div>
       )}
@@ -210,6 +264,10 @@ export function InventoryPage() {
 
       <BottomSheet open={creating} title="Agregar producto" onClose={closeSheet}>
         <CreateProductForm onCreated={handleCreated} onCancel={closeSheet} />
+      </BottomSheet>
+
+      <BottomSheet open={editing !== null} title="Editar producto" onClose={closeEdit}>
+        {editing && <EditProductForm key={editing.id} product={editing} onSaved={handleSaved} onCancel={closeEdit} />}
       </BottomSheet>
 
       <Toast message={toast} onDismiss={dismissToast} />
