@@ -2,12 +2,18 @@ import type { CreateMovementInput, CreateMovementItemInput } from '../../types/m
 import type { Product } from '../../types/product';
 import { MAX_CENTS, parsePesos } from '../../utils/money';
 import { MOVEMENT_TYPE_META } from '../../utils/movements';
+import type { StoreRole } from '../../types/store';
 
 // Límite de la columna Int de PostgreSQL: el stock resultante no puede pasarlo.
 const MAX_STOCK = 2_147_483_647;
 
 export const MOVEMENT_KINDS = ['RETURN', 'SHRINKAGE', 'ADJUSTMENT_IN', 'ADJUSTMENT_OUT'] as const;
 export type MovementKind = (typeof MOVEMENT_KINDS)[number];
+
+// Solo el dueño registra ajustes (RF6, I18). La API también lo rechaza (403 ROLE_NOT_ALLOWED).
+export function kindsForRole(role: StoreRole): readonly MovementKind[] {
+  return role === 'OWNER' ? MOVEMENT_KINDS : MOVEMENT_KINDS.filter((kind) => kind !== 'ADJUSTMENT_IN' && kind !== 'ADJUSTMENT_OUT');
+}
 
 export const KIND_META = {
   RETURN: {

@@ -1,16 +1,17 @@
 import { createContext, useContext } from 'react';
 import type { CurrentUser } from '../types/auth';
 import type { RequestFailure } from '../services/api';
-import type { StoreInfo } from '../types/store';
+import type { MemberStore, StoreInfo } from '../types/store';
 
 // - loading: todavía no se sabe si hay sesión (GET /me en curso).
-// - authenticated: GET /me respondió con la persona.
+// - authenticated: GET /me respondió con la persona. `activeStoreId` es la tienda sobre la que opera (D28), o null si
+//   tiene varias y aún no elige; `lostStoreName` es la tienda a la que acaba de perder acceso, para explicarlo.
 // - anonymous: no hay sesión (401 SESSION_NOT_FOUND), o se cerró. `expired` indica que había una sesión abierta y la
 //   API dejó de reconocerla (venció o se revocó): /iniciar-sesion lo explica.
 // - error: no se pudo comprobar (sin red, 500). No es lo mismo que "sin sesión": se ofrece reintentar.
 export type AuthState =
   | { status: 'loading' }
-  | { status: 'authenticated'; user: CurrentUser }
+  | { status: 'authenticated'; user: CurrentUser; activeStoreId: string | null; lostStoreName?: string }
   | { status: 'anonymous'; expired?: boolean }
   | { status: 'error'; failure: RequestFailure };
 
@@ -32,8 +33,10 @@ export interface AuthContextValue {
   signIn: (credential: string) => Promise<void>;
   // Cierra la sesión en la API (POST /auth/logout). Lanza si la API no responde.
   signOut: () => Promise<void>;
-  // Guarda la tienda recién creada en la persona actual, sin volver a pedir GET /me.
-  setStore: (store: StoreInfo) => void;
+  // Cambia la tienda activa (RF7) y la recuerda en el dispositivo. Debe ser una de `user.stores`.
+  selectStore: (storeId: string) => void;
+  // Agrega la tienda recién creada a la persona actual, como dueño, y la vuelve la activa, sin volver a pedir GET /me.
+  addOwnedStore: (store: StoreInfo) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -51,9 +54,16 @@ export function useCurrentUser(): CurrentUser {
   return state.user;
 }
 
-// Para pantallas que ya están detrás de <RequireStore>: la persona y su tienda (D16).
-export function useCurrentStore(): StoreInfo {
-  const { store } = useCurrentUser();
-  if (!store) throw new Error('useCurrentStore requiere una tienda registrada');
+// La tienda activa con el rol de la persona en ella, o null si no hay sesión o aún no elige.
+export function useActiveStore(): MemberStore | null {
+  const { state } = useAuth();
+  if (state.status !== 'authenticated') return null;
+  return state.user.stores.find((store) => store.id === state.activeStoreId) ?? null;
+}
+
+// Para pantallas que ya están detrás de <RequireStore>: la tienda activa y el rol de la persona en ella (D26, D28).
+export function useCurrentStore(): MemberStore {
+  const store = useActiveStore();
+  if (!store) throw new Error('useCurrentStore requiere una tienda activa');
   return store;
 }

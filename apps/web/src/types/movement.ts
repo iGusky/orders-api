@@ -11,6 +11,7 @@ interface MovementBase {
   occurredAt: string;  // fecha ISO 8601; JSON no tiene tipo Date
   createdAt: string;   // fecha ISO 8601
   totalCents: number;  // entero en centavos
+  createdById: string; // quién lo registró (D31)
 }
 
 // Refleja Movement_direction_check: direction solo existe en ADJUSTMENT
@@ -27,8 +28,8 @@ export interface MovementItem {
   product: { name: string };
 }
 
-// GET /movements incluye los renglones; POST /movements no.
-export type MovementWithItems = Movement & { items: MovementItem[] };
+// GET /movements incluye los renglones y el autor; POST /movements no.
+export type MovementWithItems = Movement & { items: MovementItem[]; createdBy: { id: string; name: string } };
 
 export type PaginatedMovements = Paginated<MovementWithItems>;
 

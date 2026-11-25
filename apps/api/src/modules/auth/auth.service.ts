@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service.js';
 import { SessionsService } from '../sessions/sessions.service.js';
 import { SessionNotFoundError } from './exceptions/SessionNotFoundException.js';
 import { UserInfoNotFoundOnGoogle } from './exceptions/UserInfoNotFoundOnGoogle.js';
+import { MembersService } from '../members/members.service.js';
 
 const client = new OAuth2Client();
 
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly usersService: UsersService,
     private readonly sessionService: SessionsService,
+    private readonly membersService: MembersService,
   ) {}
 
   async initSession({ credential }: GoogleLoginDto): Promise<{
@@ -47,7 +49,17 @@ export class AuthService {
       });
     }
 
+    // RF2, D29: solo con el correo verificado por Google; si no, cualquiera podría heredar una invitación ajena.
+    if (payload.email && payload.email_verified) {
+      await this.membersService.acceptPendingInvitations(user.id, payload.email);
+    }
+
     const session = await this.sessionService.createSession(user.id);
     return session;
+  }
+
+  async closeSession(token: string | undefined): Promise<void> {
+    if (!token) return;
+    await this.sessionService.revokeSession(token);
   }
 }

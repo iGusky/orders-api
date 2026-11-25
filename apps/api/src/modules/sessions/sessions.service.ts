@@ -49,6 +49,18 @@ export class SessionsService {
     })
   }
 
+  // Logout (D24): revoca solo la sesión de este token. updateMany para que sea idempotente: un token que no existe
+  // o una sesión ya revocada no lanza error. No se filtra por expiresAt: revocar una vencida no hace daño.
+  async revokeSession(token: string) {
+    await this.prisma.session.updateMany({
+      where: {
+        tokenHash: this.hashToken(token),
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    })
+  }
+
   hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex')
   }

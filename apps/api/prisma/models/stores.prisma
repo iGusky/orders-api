@@ -1,14 +1,56 @@
 model Store {
-  id           String     @id @default(uuid(7)) @db.Uuid
-  ownerId      String     @unique @db.Uuid
-  owner        User       @relation(fields: [ownerId], references: [id])
+  id           String            @id @default(uuid(7)) @db.Uuid
+  ownerId      String            @unique @db.Uuid
+  owner        User              @relation(fields: [ownerId], references: [id])
   name         String
   address      String
   phone        String
   description  String?
   contactEmail String?
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime          @default(now())
   deletedAt    DateTime?
   movements    Movement[]
   products     Product[]
+  members      StoreMember[]
+  invitations  StoreInvitation[]
+}
+
+// Rol de una persona en una tienda (D25).
+enum StoreRole {
+  OWNER
+  EMPLOYEE
+}
+
+// Pertenencia de una persona a una tienda, incluido el dueño (D27). Quitar a alguien borra la fila (P17).
+model StoreMember {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  storeId   String    @db.Uuid
+  store     Store     @relation(fields: [storeId], references: [id])
+  userId    String    @db.Uuid
+  user      User      @relation("StoreMemberUser", fields: [userId], references: [id])
+  role      StoreRole
+  // Quién lo agregó; null en el dueño.
+  addedById String?   @db.Uuid
+  addedBy   User?     @relation("StoreMemberAddedBy", fields: [addedById], references: [id])
+  createdAt DateTime  @default(now())
+
+  @@unique([storeId, userId])
+  @@index([userId])
+}
+
+// Correo agregado por el dueño que aún no corresponde a ninguna persona registrada (D29).
+// Pendiente = acceptedAt y revokedAt en null. Máximo una pendiente por (storeId, email) lo aplica el service (I19).
+model StoreInvitation {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  storeId     String    @db.Uuid
+  store       Store     @relation(fields: [storeId], references: [id])
+  email       String
+  invitedById String    @db.Uuid
+  invitedBy   User      @relation(fields: [invitedById], references: [id])
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+
+  @@index([storeId])
+  @@index([email])
 }

@@ -13,8 +13,8 @@ import { MovementItemRow } from './MovementItemRow';
 import { RefundTotalTag } from './RefundTotalTag';
 import {
   KIND_META,
-  MOVEMENT_KINDS,
   hasErrors,
+  kindsForRole,
   isRefund,
   maxQuantity,
   quantityError,
@@ -28,6 +28,7 @@ import {
   type MovementKind,
 } from './movementForm';
 import { failedMessage } from '../../utils/requestErrors';
+import { useCurrentStore } from '../../auth/AuthContext';
 
 interface SavedMovement {
   kind: MovementKind;
@@ -38,12 +39,16 @@ interface SavedMovement {
 function requestErrorMessage(error: unknown): string {
   const domainError = getDomainError(error);
   if (domainError?.errorCode === 'INSUFFICIENT_STOCK') return 'Ya no hay stock suficiente de alguno de los productos. Revisa las cantidades.';
+  if (domainError?.errorCode === 'ROLE_NOT_ALLOWED') return 'Solo el dueño de la tienda puede registrar ajustes.';
   if (domainError?.errorCode === 'PRODUCT_NOT_FOUND') return 'Uno de los productos ya no existe. Quítalo del movimiento.';
   if (getApiErrorBody(error)?.statusCode === 400) return 'La API rechazó el movimiento. Revisa las cantidades y los importes.';
   return failedMessage('No se pudo registrar el movimiento.', error);
 }
 
 export function MovementFormPage() {
+  const { role } = useCurrentStore();
+  const kinds = kindsForRole(role);
+  const subtitle = role === 'OWNER' ? 'Devoluciones, mermas y ajustes de stock.' : 'Devoluciones y mermas.';
   const [kind, setKind] = useState<MovementKind | null>(null);
   const [items, setItems] = useState<MovementFormItem[]>([]);
   const [occurredAt, setOccurredAt] = useState<string | null>(null);
@@ -73,8 +78,8 @@ export function MovementFormPage() {
   if (!kind) {
     return (
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-safe pb-safe md:px-6">
-        <PageHeader title="Registrar movimiento">Devoluciones, mermas y ajustes de stock.</PageHeader>
-        <KindPicker kind={kind} onSelect={selectKind} />
+        <PageHeader title="Registrar movimiento">{subtitle}</PageHeader>
+        <KindPicker kinds={kinds} kind={kind} onSelect={selectKind} />
       </main>
     );
   }
@@ -128,7 +133,7 @@ export function MovementFormPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-safe pb-40 md:px-6 md:pb-10">
-      <PageHeader title="Registrar movimiento">Devoluciones, mermas y ajustes de stock.</PageHeader>
+      <PageHeader title="Registrar movimiento">{subtitle}</PageHeader>
 
       {lastSaved && (
         <div role="status" className="flex gap-3 rounded-lg border border-primary bg-primary-soft p-4">
@@ -150,7 +155,7 @@ export function MovementFormPage() {
       )}
 
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
-        <KindPicker kind={kind} onSelect={selectKind} />
+        <KindPicker kinds={kinds} kind={kind} onSelect={selectKind} />
 
         <section aria-label="Productos" className="flex flex-col gap-4">
           <ProductCombobox
@@ -225,16 +230,17 @@ export function MovementFormPage() {
 }
 
 interface KindPickerProps {
+  kinds: readonly MovementKind[];
   kind: MovementKind | null;
   onSelect: (kind: MovementKind) => void;
 }
 
-function KindPicker({ kind, onSelect }: KindPickerProps) {
+function KindPicker({ kinds, kind, onSelect }: KindPickerProps) {
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 font-semibold">¿Qué quieres registrar?</legend>
       <div className="flex flex-wrap gap-2">
-        {MOVEMENT_KINDS.map((option) => {
+        {kinds.map((option) => {
           const { label, icon: Icon } = KIND_META[option];
           return (
             <ChoiceChip key={option} selected={option === kind} onSelect={() => onSelect(option)}>

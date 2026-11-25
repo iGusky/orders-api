@@ -5,7 +5,15 @@ export const DOMAIN_ERROR_CODES = [
   'SESSION_NOT_FOUND',
   'USER_INFO_NOT_FOUND_ON_GOOGLE',
   'USER_HAS_STORE',
-  'USER_DONT_HAVE_STORE',
+  // Fase 3: ver "Empleados y tienda activa" en docs/api.md.
+  'STORE_NOT_SELECTED',
+  'STORE_NOT_FOUND',
+  'ROLE_NOT_ALLOWED',
+  'MEMBER_ALREADY_EXISTS',
+  'INVITATION_ALREADY_EXISTS',
+  'MEMBER_NOT_FOUND',
+  'INVITATION_NOT_FOUND',
+  'CANNOT_REMOVE_OWNER',
 ] as const;
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];
 

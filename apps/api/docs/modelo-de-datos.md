@@ -5,7 +5,8 @@
 
 Última actualización: 2026-10-30
 
-> Las secciones 1 a 7 describen el MVP. La segunda fase (tiendas y cuentas de Google) está en la [sección 8](#8-fase-2-tiendas-y-cuentas-de-google).
+> Las secciones 1 a 7 describen el MVP. La segunda fase (tiendas y cuentas de Google) está en la [sección 8](#8-fase-2-tiendas-y-cuentas-de-google)
+> y la tercera (empleados y varias tiendas por persona), en la [sección 9](#9-fase-3-empleados-y-varias-tiendas-por-persona).
 
 ---
 
@@ -350,7 +351,8 @@ Por qué: es lo que necesita el negocio hoy.
 Consecuencias:
 - La FK vive en `Store` (`ownerId` único). Permitir varias tiendas después solo requiere quitar la unicidad.
 - Puede existir un usuario sin tienda: es el estado de quien acaba de entrar por primera vez.
-- Empleados o varios usuarios por tienda quedan fuera del alcance (8.8).
+- Empleados o varios usuarios por tienda quedan fuera del alcance (8.8). La fase 3 los agrega sin cambiar esta regla
+  para el dueño (D26).
 
 **D17. La tienda es el límite de aislamiento: `storeId` en `Product` y `Movement`, con base de datos y esquema compartidos.**
 Por qué: una sola base con una columna discriminadora es lo más simple de operar y migrar, y escala a muchas tiendas pequeñas.
@@ -424,6 +426,9 @@ Consecuencias:
 - `User` no guarda nada de la sesión: una persona puede tener varias sesiones activas, una por dispositivo.
 - Una sesión es válida si existe su `tokenHash`, `revokedAt` es `null`, `expiresAt` es futura y el usuario no está eliminado.
 - Logout revoca **esa** sesión. Revocar todas las de un usuario es un `UPDATE` por `userId`.
+- `POST /auth/logout` es público e idempotente: revoca la sesión de la cookie si existe (`revokedAt`), borra la
+  cookie con los mismos atributos con que se puso y responde **204** aunque no haya cookie o la sesión ya no sea válida.
+  Así cerrar sesión nunca falla con 401 ni deja una cookie vieja en el navegador.
 - Excepción a D7: `Session` no lleva `deletedAt`. No es un dato de negocio, y las filas vencidas o revocadas se
   pueden borrar físicamente (ver P16).
 
@@ -440,7 +445,7 @@ Consecuencias:
 | Método y ruta       | Qué hace                                                      |
 |---------------------|---------------------------------------------------------------|
 | `POST /auth/google` | Recibe la credencial de Google, crea la sesión y pone la cookie. Responde **204** sin body; el frontend llama después a `GET /me` (ver D22, D23, D24) |
-| `POST /auth/logout` | Cierra la sesión                                              |
+| `POST /auth/logout` | Revoca la sesión de la cookie y la borra. Público e idempotente: siempre **204** (D24) |
 | `GET /me`           | Usuario actual y su tienda, si tiene. El frontend decide con esto si muestra el alta de tienda |
 | `POST /stores`      | Crea la tienda del usuario. 409 si ya tiene una (I14)         |
 | `GET /stores/me`    | Datos de su tienda                                            |
@@ -463,7 +468,7 @@ Consecuencias:
 ### 8.8 Fuera del alcance de esta fase
 
 - Varias tiendas por persona.
-- Empleados, roles o invitaciones a una tienda.
+- Empleados, roles o invitaciones a una tienda (pasan a la fase 3, sección 9).
 - Otros métodos de acceso (correo y contraseña, Apple, Facebook).
 - Monedas distintas por tienda.
 - Tienda pública o catálogo visible para clientes.
@@ -490,3 +495,242 @@ lo que obligaría a guardar `storeId` en `MovementItem`. La segunda opción prot
 **P15. ¿Qué pasa al eliminar una cuenta o una tienda?** D7 pide borrado lógico y D11 prohíbe borrar movimientos.
 ¿Los datos se conservan para siempre? ¿Qué implica para los datos personales (`email`, `name`, teléfono)?
 ¿Se puede crear una tienda nueva después de eliminar la anterior? Afecta cómo se hace cumplir I14 junto con `deletedAt`.
+
+---
+
+## 9. Fase 3: empleados y varias tiendas por persona
+
+> **Estado (2026-11-24): implementado en la API** y migración aplicada en desarrollo. En el frontend ya están la tienda
+> activa (RF7), los permisos (RF6), `/equipo` (RF1, RF3, RF4) y el alta para quien no tiene tienda (RF9). Movimientos
+> muestra quién registró cada uno (RF8). Falta que un empleado salga de una tienda desde la UI (RF5). El contrato para el frontend está en [`apps/web/docs/api.md`](../../web/docs/api.md) ("Empleados (fase 3)").
+
+### 9.1 Objetivo
+
+El dueño no siempre está en el bazar, y no puede dejarle su celular a un empleado ni prestarle su cuenta. Hace falta
+que **otras personas, con su propia cuenta de Google, operen la misma tienda**, con menos permisos que el dueño.
+
+- El dueño agrega a sus empleados **por correo**. No hay servicio de correo: no se envía ninguna invitación; el acceso
+  aparece en cuanto el empleado entra a la app con ese correo.
+- Una persona puede pertenecer a **varias tiendas** (la suya y las de otros), y elige sobre cuál opera.
+- Los movimientos guardan **quién** los registró.
+
+### 9.2 Glosario
+
+| Término (es)       | En código          | Significado                                                                          |
+|--------------------|--------------------|--------------------------------------------------------------------------------------|
+| **Miembro**        | `StoreMember`      | Una persona que pertenece a una tienda, con un rol. Incluye al dueño.                |
+| **Rol**            | `StoreRole`        | `OWNER` (dueño) o `EMPLOYEE` (empleado). Define qué puede hacer en esa tienda.       |
+| **Empleado**       | `EMPLOYEE`         | Miembro que opera la tienda con permisos limitados (9.3).                            |
+| **Invitación**     | `StoreInvitation`  | Un correo que el dueño agregó y que todavía no corresponde a ninguna persona registrada. |
+| **Tienda activa**  | header `X-Store-Id`| La tienda sobre la que opera la persona en una petición (D28).                       |
+
+### 9.3 Requerimientos
+
+**Funcionales**
+
+- **RF1. Agregar empleado.** El dueño escribe un correo. La API lo normaliza (sin espacios, en minúsculas) y:
+  - si existe un usuario con ese correo, lo agrega como `EMPLOYEE` de inmediato;
+  - si no existe, guarda una **invitación pendiente** (D29).
+  - Si esa persona ya es miembro (incluido el propio dueño) o ya hay una invitación pendiente con ese correo, responde
+    **409** y no duplica nada.
+- **RF2. Vincular al entrar.** Al iniciar sesión con Google (`POST /auth/google`), si el correo está verificado por
+  Google (`email_verified`) y hay invitaciones pendientes con ese correo, cada una se convierte en membresía
+  `EMPLOYEE` y se marca como aceptada, en la misma transacción. Aplica tanto a cuentas nuevas como existentes.
+- **RF3. Ver el equipo.** El dueño ve la lista de miembros (nombre, correo, foto, rol, desde cuándo) y las invitaciones
+  pendientes (correo, cuándo se agregó).
+- **RF4. Quitar acceso.** El dueño quita a un empleado o cancela una invitación pendiente. Surte efecto en la
+  **siguiente petición** del empleado (I20). Los movimientos que registró se conservan (D11), con su autor.
+- **RF5. Salir de una tienda** (*deseable*). Un empleado puede dejar una tienda por su cuenta. El dueño no puede salir
+  de la suya.
+- **RF6. Permisos por rol** (D30):
+
+  | Acción                                                   | Dueño | Empleado |
+  |----------------------------------------------------------|:-----:|:--------:|
+  | Ver inventario y movimientos                             |  sí   |    sí    |
+  | Crear productos                                          |  sí   |    sí    |
+  | Registrar venta (`SALE`)                                 |  sí   |    sí    |
+  | Agregar stock (`RESTOCK`)                                |  sí   |    sí    |
+  | Registrar devolución (`RETURN`) y merma (`SHRINKAGE`)     |  sí   |    sí    |
+  | Registrar ajuste (`ADJUSTMENT`, `IN` u `OUT`)             |  sí   |  **no**  |
+  | Ver, agregar y quitar empleados                          |  sí   |    no    |
+  | Editar los datos de la tienda (cuando exista el endpoint) |  sí   |    no    |
+
+- **RF7. Elegir tienda.** Quien pertenece a más de una tienda elige sobre cuál opera y puede cambiarla en cualquier
+  momento desde el inicio. La tienda activa se ve siempre en el inicio y en las pantallas de captura, para que nadie
+  registre una venta en la tienda equivocada.
+- **RF8. Autor de cada movimiento.** Todo movimiento nuevo guarda quién lo registró (D31) y la lista de movimientos lo
+  muestra ("Registrado por Ana").
+- **RF9. Persona sin tienda.** Quien no es dueño ni empleado de ninguna tienda puede registrar la suya o pedirle a un
+  dueño que lo agregue. La pantalla de alta le muestra el correo con el que entró, que es el que el dueño debe escribir.
+
+**No funcionales**
+
+- Los permisos se aplican en la **API**; el frontend solo oculta lo que no se puede hacer (D30).
+- La pertenencia se comprueba **en cada petición**, sin caché que retrase quitar un acceso (I20).
+- El aislamiento entre tiendas (D17, I13) no cambia: solo cambia **cómo** se decide cuál es la tienda de la petición.
+
+### 9.4 Entidades
+
+#### StoreMember (nueva)
+
+| Campo       | Tipo                | Notas                                                                   |
+|-------------|---------------------|-------------------------------------------------------------------------|
+| `id`        | UUID v7             | PK. Ver D13                                                             |
+| `storeId`   | UUID v7             | FK → Store                                                              |
+| `userId`    | UUID v7             | FK → User, con índice (para "mis tiendas")                              |
+| `role`      | `StoreRole`         | `OWNER` o `EMPLOYEE`                                                    |
+| `addedById` | UUID v7, opcional   | FK → User. Quién lo agregó; `null` en el dueño                          |
+| `createdAt` | fecha-hora          | Lo pone el servidor                                                     |
+
+- Único `(storeId, userId)` (I16). La búsqueda del guard es exactamente esa llave.
+- Quitar a un empleado borra la fila (P17, resuelta). Excepción a D7, como `Session`.
+
+#### StoreInvitation (nueva)
+
+| Campo         | Tipo              | Notas                                                    |
+|---------------|-------------------|----------------------------------------------------------|
+| `id`          | UUID v7           | PK                                                       |
+| `storeId`     | UUID v7           | FK → Store                                               |
+| `email`       | texto             | Normalizado (sin espacios, minúsculas)                   |
+| `invitedById` | UUID v7           | FK → User (el dueño)                                     |
+| `createdAt`   | fecha-hora        |                                                          |
+| `acceptedAt`  | fecha, opcional   | Cuándo se convirtió en membresía (RF2)                   |
+| `revokedAt`   | fecha, opcional   | Cuándo la canceló el dueño (RF4)                         |
+
+- Una invitación está **pendiente** si `acceptedAt` y `revokedAt` son `null`. Máximo una pendiente por `(storeId, email)` (I19).
+  I19 lo aplica el service, no un índice: un índice único parcial (`WHERE ... IS NULL`) no se puede declarar en el
+  esquema de Prisma y una migración futura lo borraría. Si dos peticiones simultáneas crean dos invitaciones iguales,
+  al aceptarse producen una sola membresía (`createMany` con `skipDuplicates`).
+- Índice por `email` (la búsqueda de RF2 es por correo, sin tienda).
+
+#### Cambios en entidades existentes
+
+| Entidad    | Cambio                                    | Notas                                                         |
+|------------|-------------------------------------------|---------------------------------------------------------------|
+| `Store`    | Sin cambios en columnas                   | `ownerId` sigue único (D26). Al crear la tienda se crea también su `StoreMember` `OWNER`, en la misma transacción (I17) |
+| `Movement` | `createdById` (FK → User)                 | Obligatorio e inmutable (D31). Ver la migración en 9.7        |
+| `User`     | Sin cambios en columnas                   | `email` se usa para RF1 y RF2: conviene guardarlo normalizado y refrescarlo al entrar |
+
+#### Relaciones
+
+```
+User 1 ──── 0..1 Store (como dueño, ownerId)
+User 1 ──── N StoreMember N ──── 1 Store
+Store 1 ──── N StoreInvitation
+User 1 ──── N Movement (createdById)
+```
+
+### 9.5 Decisiones
+
+**D25. Dos roles fijos, `OWNER` y `EMPLOYEE`, con permisos escritos en el código.**
+Por qué: es lo que pide el negocio. Una tabla de permisos configurables es más flexible, pero nadie la necesita hoy.
+Consecuencia: agregar un rol después es agregar un valor al enum y revisar cada regla de permisos.
+
+**D26. Una persona es dueña de máximo una tienda, pero puede ser empleada de varias.**
+Por qué: mantiene D16 e I14 para el dueño (sin cambios en `Store`) y cubre el caso real: el empleado de un bazar puede
+ayudar en otro, y un dueño puede ser empleado de otra tienda.
+Consecuencia: "tener tienda" deja de significar "ser dueño". `GET /me` devuelve la lista de tiendas de la persona con
+su rol en cada una.
+
+**D27. La pertenencia vive en `StoreMember`, incluido el dueño.**
+Por qué: el guard resuelve tienda y rol con una sola búsqueda por `(storeId, userId)`, y "mis tiendas" es una sola
+consulta. La alternativa (solo empleados en `StoreMember` y el dueño deducido de `Store.ownerId`) obliga a consultar dos
+fuentes en cada petición.
+Consecuencia: `Store.ownerId` y la fila `OWNER` deben coincidir siempre (I17). Se crean juntas y no se editan.
+
+**D28. La tienda activa viaja en el header `X-Store-Id`, y la API comprueba en cada petición que la persona pertenece a ella.**
+Por qué: la selección es por pestaña. Si la tienda activa viviera en la sesión, cambiarla en una pestaña cambiaría en
+silencio la de otra, y una venta podría quedar en la tienda equivocada. Ponerla en la URL obligaría a reescribir todas
+las rutas de la API y del frontend.
+Consecuencias:
+- **Matiza D18.** El id de la tienda sí viene del cliente, pero nunca se usa sin comprobar la pertenencia: lo que
+  D18 protege (que nadie elija la tienda de otro) sigue igual. Los DTOs siguen sin `storeId` y las rutas no cambian.
+- El guard busca `StoreMember` por `(storeId, userId)` y pone en el request la tienda y el **rol**.
+- Sin header en un endpoint que necesita tienda: **400** `STORE_NOT_SELECTED`. Con un id que no es UUID, de una tienda
+  borrada o de la que la persona no es miembro: **404** `STORE_NOT_FOUND`, sin distinguir los casos (D19).
+- `USER_DONT_HAVE_STORE` deja de usarse en `/products` y `/movements`: lo sustituyen los dos errores anteriores.
+- CORS: un header propio provoca una petición *preflight*. Si `enableCors` define `allowedHeaders`, debe incluir
+  `X-Store-Id`. Efecto secundario útil: un formulario de otro sitio no puede mandar ese header, lo que suma una
+  defensa contra CSRF (D22).
+- El frontend recuerda la última tienda elegida en el dispositivo (`localStorage`) solo como comodidad; la autoridad
+  es siempre la comprobación de la API.
+
+**D29. Los empleados se agregan por correo, sin enviar correos; un correo sin cuenta queda como invitación pendiente.**
+Por qué: no hay servicio de correo. El dueño no depende de que el empleado haya entrado antes.
+Consecuencias:
+- La vinculación ocurre al iniciar sesión (RF2) y solo si Google marca el correo como verificado (`email_verified`).
+  Sin esa condición, alguien podría crear una cuenta de Google con un correo ajeno sin verificar y heredar el acceso.
+- Esto **no contradice D20**: la persona se sigue identificando por `sub`. El correo solo sirve para encontrar a quién
+  dar acceso, y la decisión la toma el dueño.
+- El correo se compara normalizado. Riesgo aceptado: si el dueño escribe mal el correo, la invitación nunca se usa; por
+  eso la lista de pendientes es visible y se puede cancelar.
+
+**D30. Los permisos se aplican en la API; el frontend solo oculta acciones.**
+Por qué: el frontend no es de confianza (D21).
+Consecuencias:
+- Un empleado que manda un `ADJUSTMENT` recibe **403** `ROLE_NOT_ALLOWED`, aunque la UI no le muestre la opción.
+- Los endpoints solo para dueño (equipo) también responden **403** `ROLE_NOT_ALLOWED` a un empleado: la tienda sí es
+  suya como miembro, así que aquí un 404 no oculta nada.
+
+**D31. Cada movimiento guarda quién lo registró (`Movement.createdById`).**
+Por qué: con varias personas en una tienda, una diferencia de inventario se aclara sabiendo quién capturó qué.
+Agregarlo después no recupera el autor de lo ya registrado.
+Consecuencias:
+- Lo pone la API con el usuario de la sesión; no viene en el DTO (igual que `storeId`, D18).
+- Es inmutable como el resto del movimiento (D11). Si se quita a un empleado, sus movimientos conservan el autor.
+- `GET /movements` devuelve el autor (`createdBy: { id, name }`).
+
+### 9.6 Invariantes
+
+- **I16.** Una persona pertenece como máximo una vez a cada tienda (`StoreMember` único por `(storeId, userId)`).
+- **I17.** Cada tienda tiene exactamente un miembro `OWNER`, y es `Store.ownerId`. Nadie puede quitarlo ni cambiar su rol.
+- **I18.** Solo un miembro `OWNER` puede crear un `ADJUSTMENT` y gestionar miembros e invitaciones.
+- **I19.** Hay máximo una invitación pendiente por `(storeId, email)`, y no hay invitaciones pendientes para el correo de
+  alguien que ya es miembro de esa tienda.
+- **I20.** Toda operación sobre datos de una tienda comprueba la pertenencia **en esa misma petición**. Quitar a un
+  empleado le impide operar desde su siguiente petición.
+- **I21.** `Movement.createdById` era miembro de `Movement.storeId` al crear el movimiento.
+
+### 9.7 Plan por etapas
+
+**API** (ver `apps/api/CLAUDE.md`):
+
+1. **Esquema.** `StoreRole`, `StoreMember`, `StoreInvitation` y `Movement.createdById`. Migración en pasos si hay datos
+   en producción: crear la fila `OWNER` de cada tienda existente, agregar `createdById` como opcional, llenarlo con el
+   dueño de la tienda y hacerlo obligatorio.
+   Hecho así en la migración. Las filas `OWNER` creadas ahí usan `gen_random_uuid()` (UUID v4): Prisma genera los v7 en
+   el cliente (D13) y en SQL no hay un equivalente en todas las versiones de PostgreSQL.
+2. **Alta de tienda.** `POST /stores` crea también la membresía `OWNER` en la misma transacción (I17).
+3. **Guard.** Leer `X-Store-Id`, buscar la membresía y poner tienda y rol en el request (D28). `GET /me` devuelve `stores`.
+4. **Permisos.** `ADJUSTMENT` solo para `OWNER` (D30). Una prueba por regla de la tabla de RF6.
+5. **Equipo.** Endpoints de miembros e invitaciones (ver `apps/web/docs/api.md`).
+6. **Vinculación.** RF2 dentro de `POST /auth/google`.
+7. **Autor.** `createdById` al crear movimientos y `createdBy` en `GET /movements`.
+8. **Pruebas de aislamiento** (I13, I20): un empleado quitado recibe 404; un miembro de la tienda A no ve la tienda B
+   aunque mande su id.
+
+**Frontend** (`apps/web`, con agentes): tienda activa y selector (RF7), permisos en la UI (RF6), pantalla de equipo
+(RF1, RF3, RF4), autor en movimientos (RF8) y alta de tienda para quien no tiene ninguna (RF9).
+
+### 9.8 Fuera del alcance de esta fase
+
+- Enviar correos o enlaces de invitación.
+- Roles personalizados o permisos por persona.
+- Transferir la tienda a otro dueño, o varios dueños por tienda.
+- Ser dueño de más de una tienda (D26).
+- Notificar al empleado que lo agregaron o lo quitaron (lo verá al entrar).
+
+### 9.9 Preguntas abiertas
+
+~~**P17. ¿Quitar a un empleado borra la fila o la marca?**~~ Resuelta (2026-11-24): borrado físico de `StoreMember`.
+El historial vive en `Movement.createdById`, y volver a agregar a la persona no necesita un índice único parcial.
+
+~~**P18. ¿Qué pasa si dos usuarios tienen el mismo correo?**~~ Resuelta (2026-11-24): RF1 agrega al usuario activo
+que inició sesión más recientemente (la `Session` más nueva). La comparación no distingue mayúsculas, y los correos
+nuevos se guardan normalizados.
+
+**P19. ¿Puede un empleado editar productos** (precio, nombre) cuando exista el endpoint? Un precio de referencia mal
+cambiado afecta las ventas sugeridas, pero no el stock.
+
+**P20. ¿Necesita la API un endpoint para cambiar de tienda?** Con D28 no: el cambio es solo del cliente. Si se quiere
+recordar la última tienda **entre dispositivos**, haría falta guardarla en `User` (por ejemplo, `lastStoreId`).

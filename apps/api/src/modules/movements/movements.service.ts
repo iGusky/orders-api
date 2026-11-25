@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { CreateMovementDto } from './dto/CreateMovementDto.js';
 import { MovementItemService } from './movementItems.service.js';
 import { IndexMovementsPaginated } from './dto/IndexMovementsPaginated.js';
-import { MovementType } from '../../../generated/prisma/enums.js';
+import { MovementType, StoreRole } from '../../../generated/prisma/enums.js';
+import { RoleNotAllowedError } from '../../common/exceptions/RoleNotAllowedError.js';
+import type { StoreMembership } from '../../common/types/express.js';
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { CreateMovementItemDto } from './dto/CreateMovementItemDto.js';
@@ -14,8 +16,13 @@ export class MovementsService {
     private movementItermsService: MovementItemService,
   ) {}
 
+  // `membership` es la tienda activa y el rol de quien registra; `userId`, su autor (D31).
   @Transactional()
-  async createMovement(data: CreateMovementDto, storeId) {
+  async createMovement(data: CreateMovementDto, { store, role }: StoreMembership, userId: string) {
+    // Solo el dueño registra ajustes (RF6, I18). Depende del body, por eso no es un @Roles del controller.
+    if (data.type === MovementType.ADJUSTMENT && role !== StoreRole.OWNER) throw new RoleNotAllowedError();
+
+    const storeId = store.id;
     var totalCents = 0;
 
     if (data.type == MovementType.SALE || data.type == MovementType.RETURN) {
@@ -30,7 +37,8 @@ export class MovementsService {
         direction: data.direction,
         totalCents: totalCents,
         occurredAt: data.occurredAt ?? new Date(),
-        storeId: storeId
+        storeId: storeId,
+        createdById: userId,
       },
     });
 
@@ -70,6 +78,7 @@ export class MovementsService {
       this.txHost.tx.movement.findMany({
         where,
         include: {
+          createdBy: { select: { id: true, name: true } },
           items: {
             include: {
               product: {

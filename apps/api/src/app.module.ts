@@ -16,6 +16,8 @@ import { UsersModule } from './modules/users/users.module.js';
 import { StoresModule } from './modules/stores/stores.module.js';
 import { AuthGuard } from './common/guards/auth.guard.js';
 import { SessionsModule } from './modules/sessions/sessions.module.js';
+import { MembersModule } from './modules/members/members.module.js';
+import { StoreRoleGuard } from './common/guards/store-role.guard.js';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { SessionsModule } from './modules/sessions/sessions.module.js';
       ],
     }),
     StoresModule,
+    MembersModule,
   ],
   controllers: [AppController],
   providers: [
@@ -48,9 +51,14 @@ import { SessionsModule } from './modules/sessions/sessions.module.js';
       provide: APP_FILTER,
       useClass: DomainErrorFilter,
     },
+    // Los guards globales corren en este orden: primero la sesión y la tienda, después el rol (D30).
     {
       provide: APP_GUARD,
       useClass: AuthGuard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: StoreRoleGuard
     }
   ],
 })

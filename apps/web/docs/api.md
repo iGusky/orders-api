@@ -5,7 +5,7 @@
 > y el diseño en [`apps/api/docs/modelo-de-datos.md`](../../api/docs/modelo-de-datos.md).
 > Si este documento y el código no coinciden, gana el código: actualiza este archivo.
 
-Última revisión contra el código: 2026-11-11
+Última revisión contra el código: 2026-11-24
 
 ---
 
@@ -14,7 +14,8 @@
 - **Base URL:** `import.meta.env.VITE_API_URL` (definida en `apps/web/.env`). La API escucha en el puerto `3000` por defecto.
 - **Formato:** JSON en request y response.
 - **Sesión y tienda:** todo endpoint exige sesión (`AuthGuard` global; sin ella **401** `SESSION_NOT_FOUND`), salvo
-  `POST /auth/google`. `/products` y `/movements` además exigen tienda: sin ella **403** `USER_DONT_HAVE_STORE`.
+  `POST /auth/google`. `/products`, `/movements`, `/members` e `/invitations` además exigen la tienda activa en el
+  header `X-Store-Id` (ver "Empleados y tienda activa").
   Ver "Sesión (fase 2)" y "Errores".
 - **IDs:** UUID v7 (`string`).
 - **Fechas:** strings ISO 8601 en las respuestas (JSON no tiene tipo `Date`).
@@ -32,7 +33,7 @@
 | GET    | `/movements`      | `getMovements(params)`       | Lista paginada de movimientos con renglones  |
 | POST   | `/movements`      | `createMovement(input)`      | Registra un movimiento y ajusta el stock    |
 
-Los cinco trabajan solo con los datos de la tienda de la sesión (D17, D18). Un producto de otra tienda responde
+Los cinco trabajan solo con los datos de la tienda activa (`X-Store-Id`, D17, D28). Un producto de otra tienda responde
 **404** `PRODUCT_NOT_FOUND`, igual que uno que no existe (D19).
 
 No existen (todavía): editar o borrar productos, detalle de un movimiento, reportes. `OrdersController` existe en el código pero **no está registrado** en `AppModule`: `/orders` responde 404.
@@ -43,14 +44,14 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 
 > El frontend ya usa este contrato (`src/services/api/auth.ts`, `src/types/auth.ts`, `src/auth/`).
 > Estado en la API (2026-11-11): `POST /auth/google`, `GET /me` y `POST /stores` existen y responden errores de
-> dominio. `/auth/logout` aún responde 404, así que "Cerrar sesión" muestra "No se pudo cerrar sesión".
+> dominio. Estado 2026-11-24: `POST /auth/logout` existe.
 > Diseño en D20 a D24 de [`modelo-de-datos.md`](../../api/docs/modelo-de-datos.md#8-fase-2-tiendas-y-cuentas-de-google).
 > Cuando la API termine cada endpoint, verifica contra el controller y mueve su fila a la tabla de arriba.
 
 | Método | Ruta            | Función del cliente          | Estado en la API | Descripción                                          |
 |--------|-----------------|------------------------------|------------------|------------------------------------------------------|
 | POST   | `/auth/google`  | `loginWithGoogle({ credential })` | Existe      | Verifica el ID token de Google, pone la cookie de sesión y responde **204** sin body. Público |
-| POST   | `/auth/logout`  | `logout()`                   | Pendiente        | Revoca la sesión y borra la cookie                   |
+| POST   | `/auth/logout`  | `logout()`                   | Existe           | Revoca la sesión y borra la cookie; **204** sin body. Público e idempotente: sin cookie o con sesión vencida también responde 204 |
 | GET    | `/me`           | `getMe()`                    | Existe           | Persona de la sesión y su tienda; **401** `SESSION_NOT_FOUND` sin sesión |
 | POST   | `/stores`       | `createStore(input)`         | Existe           | Crea la tienda de la persona de la sesión; **409** `USER_HAS_STORE` si ya tiene una |
 
@@ -66,9 +67,6 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
 - **401 `SESSION_NOT_FOUND` en cualquier endpoint** (sin cookie, sesión vencida o revocada): `http.ts` avisa a
   `AuthProvider`, que manda a `/iniciar-sesion` y después regresa a la pantalla pedida. Si la persona ya estaba adentro,
   `/iniciar-sesion` le dice que su sesión terminó. Excepción: el 401 de `POST /auth/google` lo maneja la propia pantalla.
-- **403 `USER_DONT_HAVE_STORE`** en `/products` o `/movements`: `http.ts` avisa a `AuthProvider`, que quita la tienda
-  de la persona y `<RequireStore>` manda a `/registrar-tienda`. En la práctica no debería pasar, porque el frontend no
-  entra a esas pantallas sin tienda; cubre el caso de una tienda borrada con la sesión abierta.
 - `POST /auth/google` responde `204` sin body: el frontend llama después a `GET /me` (decisión en la tabla 8.6 de
   `modelo-de-datos.md`). Errores:
 
@@ -93,19 +91,24 @@ No existen (todavía): editar o borrar productos, detalle de un movimiento, repo
   "name": "Persona",
   "email": "persona@gmail.com",
   "avatarUrl": "https://lh3.googleusercontent.com/...",
-  "store": {
-    "id": "01a3...",
-    "name": "Stickers del bazar",
-    "address": "Bazar de la colonia, puesto 12",
-    "phone": "+52 55 1234 5678",
-    "description": null,
-    "contactEmail": null
-  }
+  "stores": [
+    {
+      "id": "01a3...",
+      "name": "Stickers del bazar",
+      "address": "Bazar de la colonia, puesto 12",
+      "phone": "+52 55 1234 5678",
+      "description": null,
+      "contactEmail": null,
+      "role": "OWNER"
+    },
+    { "id": "01a4...", "name": "Tazas Lupita", "address": "...", "phone": "...", "description": null, "contactEmail": null, "role": "EMPLOYEE" }
+  ]
 }
 ```
 
-`store` trae solo los datos del negocio (`StoreInfo` en `src/types/store.ts`, igual que `StoreInfo` de la API), y es
-`null` si la persona aún no registra su tienda (D16). En ese caso `<RequireStore>` manda a `/registrar-tienda` antes de cualquier otra pantalla.
+`stores` son todas las tiendas activas de la persona, con su rol en cada una (D26): primero la propia, luego por
+antigüedad. Cada una es `MemberStore` (`StoreInfo` + `role`, en `src/types/store.ts`, igual que en la API). Lista vacía si no
+pertenece a ninguna: `<RequireStore>` manda a `/registrar-tienda`; con varias y ninguna elegida, a `/elegir-tienda`.
 
 `POST /stores` (`StoresController`, detrás del `AuthGuard` global: **401** sin sesión). Body (`CreateStoreInput`,
 igual que `CreateStoreDto`):
@@ -118,6 +121,7 @@ igual que `CreateStoreDto`):
 | `description`  | string | no        |                          |
 | `contactEmail` | string | no        | Correo válido (`@IsEmail`) |
 
+- Crea también la membresía `OWNER` del dueño, en la misma transacción (I17).
 - Respuesta: la `Store` creada con todas sus columnas (`Store` en `src/types/store.ts`: `StoreInfo` más `ownerId`,
   `createdAt` y `deletedAt`).
 - **409** `USER_HAS_STORE`: la persona ya tiene una tienda (I14), por ejemplo si la registró en otro dispositivo. El
@@ -126,6 +130,80 @@ igual que `CreateStoreDto`):
 - El formulario además pide al menos 8 dígitos en el teléfono; la API no lo valida.
 
 Configuración: `VITE_GOOGLE_CLIENT_ID` en `apps/web/.env` (público; es el mismo Client ID que la API usa para validar `aud`, D23).
+
+---
+
+## Empleados y tienda activa (fase 3)
+
+> Diseño en la sección 9 de [`modelo-de-datos.md`](../../api/docs/modelo-de-datos.md#9-fase-3-empleados-y-varias-tiendas-por-persona)
+> (RF1 a RF9, D25 a D31). Estado (2026-11-24): **implementado en la API** (`AuthGuard`, `StoreRoleGuard`,
+> `modules/members`). En el frontend falta que un empleado pueda salir de una tienda (RF5).
+
+### Tienda activa: header `X-Store-Id` (D28)
+
+- `http.ts` agrega `X-Store-Id: <id de la tienda activa>` a **todas** las peticiones cuando hay una tienda activa.
+  Las pantallas no lo mandan a mano.
+- La API busca la membresía `(storeId, userId)` y aplica el rol. Errores globales (`http.ts` → `AuthProvider`):
+
+  | Respuesta                    | Cuándo                                                                 | Qué hace el frontend |
+  |------------------------------|------------------------------------------------------------------------|----------------------|
+  | 400 `STORE_NOT_SELECTED`     | Endpoint de tienda sin header                                          | Quita la tienda activa y manda a `/elegir-tienda` |
+  | 404 `STORE_NOT_FOUND`        | El id no es una tienda de la que la persona sea miembro (o lo quitaron) | Igual, y avisa "Ya no tienes acceso a *tienda*" |
+
+  Solo se reacciona si el error corresponde a la tienda que sigue activa: una respuesta tardía de una tienda anterior
+  no borra la selección nueva.
+- CORS: `X-Store-Id` provoca *preflight*. `enableCors` no define `allowedHeaders`, así que la API acepta los headers
+  que pida el navegador; si algún día los define, debe incluir `X-Store-Id`.
+
+`GET /me` devuelve `stores` (ver "Sesión (fase 2)" arriba).
+
+### Permisos por rol (RF6, D30)
+
+| Acción                                      | `OWNER` | `EMPLOYEE` | Error si no                |
+|---------------------------------------------|:-------:|:----------:|----------------------------|
+| `GET /products`, `GET /movements`           |   sí    |     sí     |                            |
+| `POST /products`                            |   sí    |     sí     |                            |
+| `POST /movements` `SALE`, `RESTOCK`, `RETURN`, `SHRINKAGE` | sí | sí |                            |
+| `POST /movements` `ADJUSTMENT`              |   sí    |   **no**   | 403 `ROLE_NOT_ALLOWED`     |
+| Endpoints de equipo (abajo)                 |   sí    |     no     | 403 `ROLE_NOT_ALLOWED`     |
+
+La UI oculta lo que el rol no permite (`useCurrentStore().role`), pero la regla la aplica la API.
+
+### Equipo de la tienda activa (`MembersController`, `InvitationsController`)
+
+Cliente: `getTeam`, `addMember`, `removeMember`, `revokeInvitation` en `src/services/api/members.ts`; tipos en
+`src/types/member.ts`. Los usa `/equipo`, que solo ve el dueño.
+
+| Método | Ruta                     | Descripción                                                                 |
+|--------|--------------------------|-----------------------------------------------------------------------------|
+| GET    | `/members`               | `{ members: StoreMember[], invitations: StoreInvitation[] }` (solo pendientes) |
+| POST   | `/members`               | Body `{ "email": "ana@gmail.com" }`. **201** `{ "status": "ADDED", "member": … }` si ya tenía cuenta, o `{ "status": "INVITED", "invitation": … }` si no |
+| DELETE | `/members/:userId`       | Quita a un empleado. **204**                                                |
+| DELETE | `/invitations/:id`       | Cancela una invitación pendiente. **204**                                   |
+| DELETE | `/members/me`            | La persona sale de la tienda (RF5); cualquier rol. El dueño recibe **409** `CANNOT_REMOVE_OWNER`. **204** |
+
+```json
+// StoreMember
+{ "userId": "01a5...", "name": "Ana", "email": "ana@gmail.com", "avatarUrl": null, "role": "EMPLOYEE", "createdAt": "2026-11-23T18:00:00.000Z" }
+// StoreInvitation
+{ "id": "01a6...", "email": "luis@gmail.com", "createdAt": "2026-11-23T18:00:00.000Z" }
+```
+
+Errores propios:
+
+| `errorCode`                  | Status | Cuándo                                                        |
+|------------------------------|--------|---------------------------------------------------------------|
+| `MEMBER_ALREADY_EXISTS`      | 409    | El correo es de alguien que ya es miembro (incluido el dueño) |
+| `INVITATION_ALREADY_EXISTS`  | 409    | Ya hay una invitación pendiente con ese correo                |
+| `MEMBER_NOT_FOUND`           | 404    | `DELETE /members/:userId` de alguien que no es miembro        |
+| `INVITATION_NOT_FOUND`       | 404    | Invitación inexistente, ya aceptada o cancelada               |
+| `CANNOT_REMOVE_OWNER`        | 409    | Intento de quitar al dueño (I17)                              |
+
+### Autor de cada movimiento (D31)
+
+`POST /movements` guarda `createdById` (la persona de la sesión; no va en el body) y `GET /movements` trae
+`"createdBy": { "id": "01a5...", "name": "Ana" }` en cada movimiento. Los movimientos anteriores a la fase 3 se
+atribuyeron al dueño de su tienda en la migración.
 
 ---
 
@@ -301,7 +379,9 @@ Todas las respuestas de error tienen `statusCode` y `message`. Tipos en `src/typ
 | `SESSION_NOT_FOUND`             | 401    | Sin cookie, o la sesión venció o se revocó                    | `http.ts` → `AuthProvider` (global) |
 | `USER_INFO_NOT_FOUND_ON_GOOGLE` | 401    | `POST /auth/google` con un perfil sin nombre o correo         | `/iniciar-sesion`             |
 | `USER_HAS_STORE`                | 409    | `POST /stores` cuando la persona ya tiene tienda              | `/registrar-tienda`           |
-| `USER_DONT_HAVE_STORE`          | 403    | `/products` o `/movements` sin tienda                         | `http.ts` → `AuthProvider` (global) |
+| `STORE_NOT_SELECTED`            | 400    | Endpoint de tienda sin `X-Store-Id`                            | `http.ts` → `AuthProvider` (global) |
+| `STORE_NOT_FOUND`               | 404    | `X-Store-Id` de una tienda a la que no pertenece (o borrada)  | `http.ts` → `AuthProvider` (global) |
+| `ROLE_NOT_ALLOWED`              | 403    | Un empleado intenta un `ADJUSTMENT` o un endpoint de equipo   | `/registrar-movimiento`        |
 
 **Error de validación** (`ValidationPipe` de NestJS), `message` es un arreglo:
 
@@ -321,8 +401,8 @@ conexión, o esperar porque el servidor tuvo un problema. Úsalo en vez de escri
 
 ## Discrepancias conocidas entre el código y el diseño
 
-El backend lo desarrolla el usuario a mano (ver `apps/api/CLAUDE.md`). **No modifiques `apps/api` desde el frontend**
-ni "compenses" estos comportamientos en la UI sin preguntar; repórtalos.
+Pendientes de corregir en la API (ver `apps/api/CLAUDE.md`). No "compenses" estos comportamientos en la UI: corrígelos
+en la API y quita la entrada de esta lista en el mismo cambio.
 
 1. **`items` no se valida como arreglo con al menos un renglón:** falta `@IsArray` + `@ArrayNotEmpty` (`@IsNotEmpty` no
    rechaza `[]`). `items: []` pasa la validación y crea un movimiento sin renglones con `totalCents: 0`; un objeto suelto

@@ -1,7 +1,7 @@
 # Claude: frontend (`apps/web`)
 
-A diferencia del backend (`apps/api`, donde solo actúas como tutor), **aquí sí escribes código**:
-componentes, páginas, hooks, llamadas a la API y estilos. El objetivo es avanzar rápido en el frontend
+**Aquí escribes código**: componentes, páginas, hooks, llamadas a la API y estilos. El backend (`apps/api`) también lo
+escribes tú, siguiendo `apps/api/CLAUDE.md`. El objetivo es avanzar rápido en el frontend
 con agentes, manteniendo el código consistente.
 
 ## Acerca del producto
@@ -23,8 +23,8 @@ convertir esa intención en el JSON estructurado que espera la API, con la menor
 
 - Antes de usar un endpoint, léelo en `docs/api.md`. Si sospechas que cambió, verifica contra el controller y los DTOs
   de `apps/api/src/modules/*` y **actualiza `docs/api.md`** (y los tipos en `src/types`) en el mismo cambio.
-- **No modifiques nada dentro de `apps/api`.** Si el frontend necesita algo que la API no tiene o hace mal, dilo y
-  propón qué cambiar; el usuario lo implementa. Tampoco agregues *workarounds* en la UI para bugs de la API sin preguntar.
+- Si el frontend necesita algo que la API no tiene o hace mal, **corrígelo en la API** (siguiendo `apps/api/CLAUDE.md`)
+  en lugar de compensarlo en la UI. No agregues *workarounds* en la UI para bugs de la API sin preguntar.
 
 ## Stack
 
@@ -43,7 +43,7 @@ src/
   styles.css            # Tailwind + estilos globales
   pages/<ruta>/index.tsx  # Una carpeta por pantalla
   components/           # Componentes reutilizables entre páginas
-    PageHeader.tsx      # Botón volver + título + texto secundario
+    PageHeader.tsx      # Botón volver + título + texto secundario; muestra la tienda activa si hay varias
     Pagination.tsx      # Anterior / Página n de m / Siguiente
     ErrorPanel.tsx      # Error con botón Reintentar
     EmptyState.tsx      # Estado vacío con icono, frase y acción
@@ -59,21 +59,25 @@ src/
     ThemeToggle.tsx     # Botón para alternar entre tema claro y oscuro
     GoogleSignInButton.tsx # Botón de Google Identity Services; entrega el ID token
     SignOutButton.tsx   # Botón de icono para cerrar sesión
-    AppFooter.tsx       # Créditos del autor; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda)
+    AppFooter.tsx       # Créditos del autor y versión del build; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda)
+    StoreList.tsx       # Tiendas de la persona con su rol; la activa con palomita
+    StoreSwitcher.tsx   # Tienda activa en el inicio y hoja para cambiarla (solo desde el inicio)
   auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
-    AuthContext.ts      # AuthState, useAuth, useCurrentUser, useCurrentStore
-    AuthProvider.tsx    # Carga GET /me, signIn, signOut; un 401 pasa a "sin sesión" y un 403 USER_DONT_HAVE_STORE al alta de tienda
+    AuthContext.ts      # AuthState, useAuth, useCurrentUser, useActiveStore, useCurrentStore (tienda activa + rol)
+    AuthProvider.tsx    # Carga GET /me, signIn, signOut, selectStore, addOwnedStore; un 401 pasa a "sin sesión" y perder la tienda activa, a elegir otra
+    activeStore.ts      # Recuerda la última tienda en el dispositivo y elige la inicial (D28)
     RequireAuth.tsx     # Ruta de layout: sin sesión redirige a /iniciar-sesion y luego regresa
-    RequireStore.tsx    # Ruta de layout (dentro de RequireAuth): sin tienda redirige a /registrar-tienda y luego regresa
+    RequireStore.tsx    # Ruta de layout (dentro de RequireAuth): sin tiendas a /registrar-tienda; sin tienda activa a /elegir-tienda
   hooks/useQuery.ts     # Carga de datos con cancelación y reintento
   hooks/useDebouncedValue.ts
   hooks/useTheme.ts     # Tema claro/oscuro: lo aplica, lo guarda y sigue al dispositivo si no hay elección
   services/api/         # Cliente de la API: una función por endpoint
-    http.ts             # Instancia de axios (baseURL = VITE_API_URL, withCredentials) y avisos de 401 y 403 sin tienda
+    http.ts             # Instancia de axios (baseURL = VITE_API_URL, withCredentials), header X-Store-Id y avisos de 401 y tienda no disponible
     products.ts         # getProducts, getProductById, createProduct
     movements.ts        # getMovements, createMovement
-    auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized, onStoreRequired
+    auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized, onStoreUnavailable, setActiveStoreId
     stores.ts           # createStore
+    members.ts          # getTeam, addMember, removeMember, revokeInvitation (equipo de la tienda activa)
     errors.ts           # getApiErrorBody, getDomainError, getRequestFailure (offline / server / rejected)
   services/googleIdentity.ts # Carga el script de Google Identity Services (solo en /iniciar-sesion)
   types/                # Tipos del contrato de la API (reflejan docs/api.md)
@@ -82,6 +86,8 @@ src/
   utils/dates.ts        # formatTime, formatDay ("Hoy", "Ayer", "Lunes, 26 de octubre"), dayKey
   utils/movements.ts    # Texto, icono, signo de cantidad y conteo de productos de un movimiento
   utils/products.ts     # LOW_STOCK_THRESHOLD y stockStatus
+  utils/stores.ts       # STORE_ROLE_LABEL
+  utils/appVersion.ts   # Versión del build inyectada por Vite; AppFooter muestra solo la versión
 ```
 
 ## Reglas
@@ -94,15 +100,20 @@ src/
   Los textos que ve el usuario los escribe el frontend.
 - Para el mensaje genérico de una petición fallida usa `failedMessage('No se pudo guardar el producto.', error)`: dice
   "Revisa tu conexión" solo si no hubo respuesta, y "el servidor tuvo un problema" si fue un 5xx. `useQuery` expone `error`.
-- 401 `SESSION_NOT_FOUND` y 403 `USER_DONT_HAVE_STORE` se manejan de forma global (`http.ts` → `AuthProvider`):
-  las pantallas no los tratan.
+- 401 `SESSION_NOT_FOUND`, 404 `STORE_NOT_FOUND` y 400 `STORE_NOT_SELECTED` se manejan de
+  forma global (`http.ts` → `AuthProvider`): las pantallas no los tratan.
+- La tienda activa viaja en el header `X-Store-Id`, que pone `http.ts` (D28). Las pantallas nunca lo mandan a mano y
+  la tienda solo se cambia desde el inicio (`StoreSwitcher`) o `/elegir-tienda`, nunca a mitad de una captura.
+- Permisos por rol (RF6): lo que solo puede el dueño se oculta con `useCurrentStore().role`; la API también lo rechaza
+  (403 `ROLE_NOT_ALLOWED`).
 - Toda pantalla que llama a la API maneja tres estados: cargando, error y vacío.
 - Para leer datos usa `useQuery(key, (signal) => getX(..., { signal }))` de `src/hooks/useQuery.ts`: cancela la petición
   anterior y conserva los datos previos mientras carga (atenúa la lista con `opacity-60` en lugar de mostrar el esqueleto otra vez).
   `key` debe incluir todo lo que cambia la petición.
 - Toda pantalla nueva va dentro de `<Route element={<RequireAuth />}>` y de `<Route element={<RequireStore />}>` en
-  `main.tsx`, salvo que sea pública a propósito (hoy solo `/iniciar-sesion`) o sea el alta de tienda (`/registrar-tienda`).
-  Dentro de esas pantallas, la persona se lee con `useCurrentUser()` y su tienda con `useCurrentStore()`.
+  `main.tsx`, salvo que sea pública a propósito (hoy solo `/iniciar-sesion`) o sea el alta o la elección de tienda
+  (`/registrar-tienda`, `/elegir-tienda`). Dentro de esas pantallas, la persona se lee con `useCurrentUser()` y la
+  tienda activa, con su rol, con `useCurrentStore()`.
 - La página actual y la búsqueda de una lista viven en la URL (`?pagina=2&buscar=pin`) para que funcione el botón atrás.
 
 ### Dinero (D4, D15)

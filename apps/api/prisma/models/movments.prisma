@@ -1,13 +1,16 @@
 model Movement {
-  id         String                 @id @default(uuid(7)) @db.Uuid
-  type       MovementType
-  direction  MovementDirectionType?
-  occurredAt DateTime
-  createdAt  DateTime               @default(now())
-  totalCents Int
-  items      MovementItem[]
-  storeId    String                 @db.Uuid
-  store      Store                  @relation(fields: [storeId], references: [id])
+  id          String                 @id @default(uuid(7)) @db.Uuid
+  type        MovementType
+  direction   MovementDirectionType?
+  occurredAt  DateTime
+  createdAt   DateTime               @default(now())
+  totalCents  Int
+  items       MovementItem[]
+  storeId     String                 @db.Uuid
+  store       Store                  @relation(fields: [storeId], references: [id])
+  // Quién lo registró (D31). Lo pone la API con el usuario de la sesión.
+  createdById String                 @db.Uuid
+  createdBy   User                   @relation(fields: [createdById], references: [id])
 
   @@index([storeId])
 }

@@ -14,8 +14,10 @@ import { SignInPage } from './pages/iniciar-sesion';
 import { initTheme } from './hooks/useTheme';
 import { AuthProvider } from './auth/AuthProvider';
 import { RequireAuth, SIGN_IN_PATH } from './auth/RequireAuth';
-import { CREATE_STORE_PATH, RequireStore } from './auth/RequireStore';
+import { CREATE_STORE_PATH, RequireStore, STORE_PICKER_PATH } from './auth/RequireStore';
 import { CreateStorePage } from './pages/registrar-tienda';
+import { StorePickerPage } from './pages/elegir-tienda';
+import { TeamPage } from './pages/equipo';
 
 // TEMPORAL: guía de estilos, solo en desarrollo. Ver src/pages/estilos/index.tsx para eliminarla.
 const StyleGuide = import.meta.env.DEV ? lazy(() => import('./pages/estilos')) : null;
@@ -35,7 +37,8 @@ root.render(
       {/* Todo lo de aquí dentro exige sesión (D21). */}
       <Route element={<RequireAuth />}>
         <Route path={CREATE_STORE_PATH} element={<CreateStorePage />}/>
-        {/* Y además una tienda registrada (D16): sin ella se manda al alta. */}
+        <Route path={STORE_PICKER_PATH} element={<StorePickerPage />}/>
+        {/* Y además una tienda activa (D28): sin tiendas se manda al alta; con varias y sin elegir, a elegir. */}
         <Route element={<RequireStore />}>
           <Route path="/" element={<Home />}/>
           <Route path="/movimientos" element={<MovementsPage />}/>
@@ -43,6 +46,7 @@ root.render(
           <Route path="/agregar-stock" element={<AddStockPage />}/>
           <Route path="/registrar-venta" element={<SalePage />}/>
           <Route path="/registrar-movimiento" element={<MovementFormPage />}/>
+          <Route path="/equipo" element={<TeamPage />}/>
         </Route>
       </Route>
       {StyleGuide && (
