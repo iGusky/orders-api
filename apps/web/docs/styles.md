@@ -251,8 +251,10 @@ La dirección se comunica con icono y signo, en tinta neutra. Nunca con verde y 
 
 - Fila: icono, tipo y fecha (`occurredAt`, formato corto "29 oct, 14:30") y número de productos ("3 productos") a la izquierda; importe con `formatCents` a la derecha.
   Si el importe es `0`, no se muestra.
+- Autor (D31): si lo registró **otra persona**, su nombre va al final de la línea de fecha ("29 oct, 14:30  3 productos  Ana").
+  Si lo registró la persona actual, no se repite en la fila. En la tabla de iPad va en la columna "Registró" ("Tú" o el nombre).
 - Acordeón: toda la fila es tocable, con `ChevronDown` a la derecha que gira al abrir. Debajo se despliegan los renglones
-  (producto, cantidad con signo e importe); solo un movimiento abierto a la vez.
+  (producto, cantidad con signo e importe) y, al final, "Registrado por Ana" o "Registrado por ti"; solo un movimiento abierto a la vez.
 - Sin botones de editar ni borrar (D11). Para corregir se ofrece "Registrar ajuste".
 
 ### 6.6 Etiqueta kraft (elemento distintivo)

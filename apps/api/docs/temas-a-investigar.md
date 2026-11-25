@@ -233,6 +233,11 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   *Para qué:* emitir y borrar la cookie de sesión en `POST /auth/google` y `POST /auth/logout` (D22, D24).
   *Agregado:* 2026-11-04
 
+- [ ] **Cómo borra el navegador una cookie y qué es un logout idempotente.**
+  ¿Por qué `res.clearCookie()` necesita el mismo `Path`, `Domain`, `Secure` y `SameSite` con que se puso la cookie? ¿Qué pasa si no coinciden? ¿Por qué conviene que el logout sea público y responda 204 aunque la sesión ya no exista? ¿Qué es un *logout CSRF* y por qué `SameSite=Strict` lo evita?
+  *Para qué:* `POST /auth/logout` revoca la sesión en la base y borra la cookie (D22, D24).
+  *Agregado:* 2026-11-24
+
 - [ ] **Validar las variables de entorno al arrancar.**
   ¿Qué pasa hoy si falta `OAUTH_CLIENT_ID`? ¿Cómo se usa `validate` o `validationSchema` en `ConfigModule.forRoot()` para que la app no arranque con una configuración incompleta? ¿Qué ventaja tiene `ConfigService` frente a leer `process.env` directo?
   *Para qué:* que la verificación del ID token (D23) nunca corra con un `audience` vacío.
@@ -287,6 +292,31 @@ Las referencias (D*n*, I*n*) apuntan a [`modelo-de-datos.md`](modelo-de-datos.md
   ¿Por qué falla agregar una columna `NOT NULL` sin valor por defecto a una tabla con datos? ¿Cómo se hace por pasos sin detener la aplicación?
   *Para qué:* agregar `storeId` a `Product` y `Movement` conservando los datos (P12).
   *Agregado:* 2026-10-30
+
+- [ ] **Autorización por rol en NestJS: guard con `@Roles()` o regla en el service.**
+  ¿Cómo lee un guard la metadata de un decorador propio (`Reflector`)? ¿En qué orden corren varios guards globales y
+  de controlador? ¿Por qué "un empleado no puede crear un `ADJUSTMENT`" no cabe en un guard de ruta (depende del body)
+  y dónde debe vivir entonces?
+  *Para qué:* D30 e I18 (permisos de la fase 3) sin repetir comprobaciones en cada endpoint.
+  *Agregado:* 2026-11-23
+
+- [ ] **Confiar en el correo de un proveedor de identidad: `email_verified`.**
+  ¿Qué garantiza Google cuando `email_verified` es `true`? ¿Qué ataque permite vincular cuentas por un correo no
+  verificado? ¿Por qué el correo sirve para dar acceso pero no para identificar a la persona?
+  *Para qué:* D29 y RF2 (vincular invitaciones al iniciar sesión).
+  *Agregado:* 2026-11-23
+
+- [ ] **Headers propios, *preflight* y CSRF.**
+  ¿Por qué un header como `X-Store-Id` obliga al navegador a hacer *preflight*? ¿Por qué eso impide que un formulario
+  de otro sitio lo envíe? ¿Basta como defensa contra CSRF o hace falta revisar `Origin`?
+  *Para qué:* D28 (tienda activa en un header) y la segunda defensa contra CSRF pendiente en D22.
+  *Agregado:* 2026-11-23
+
+- [ ] **Condiciones de carrera con restricciones únicas: ¿validar antes o atrapar el error de la base?**
+  Si dos peticiones agregan el mismo correo al mismo tiempo, ¿qué pasa con "buscar y luego insertar"? ¿Qué error lanza
+  Prisma al violar un `@@unique` (`P2002`) y cómo se convierte en un 409 de dominio?
+  *Para qué:* I16 e I19 (sin miembros ni invitaciones duplicadas) y la transacción de RF2.
+  *Agregado:* 2026-11-23
 
 ## TypeScript y tooling
 
