@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write # para publicar el tag de versión (<app>-v1.2.3)
   packages: write
 
 env:
@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # historial y tags completos para calcular la versión
 
       - uses: docker/setup-buildx-action@v3
 
@@ -47,6 +49,16 @@ jobs:
       - name: Nombre de imagen en minúsculas
         run: echo "IMAGE=${IMAGE,,}" >> "$GITHUB_ENV"
 
+      # Versión automática desde los commits (Conventional Commits) y el último tag api-v*.
+      # Las rutas compartidas son las mismas del filtro `paths` de arriba. Ver scripts/next-version.sh.
+      - name: Versión del build
+        id: version
+        run: |
+          scripts/next-version.sh api apps/api package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json ':(glob)tsconfig*.json' .dockerignore .github/workflows/api-image.yml | tee -a "$GITHUB_OUTPUT"
+
+      - name: Resumen de versión
+        run: echo "::notice::api v${{ steps.version.outputs.version }} (${{ steps.version.outputs.bump }}, build ${{ github.run_number }}, ${GITHUB_SHA::7})"
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -54,6 +66,8 @@ jobs:
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=${{ steps.version.outputs.version }}-build.${{ github.run_number }}
 
       - uses: docker/build-push-action@v6
         with:
@@ -66,6 +80,13 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
+
+      # Solo después de publicar la imagen: si el build falla o se cancela, la versión no se consume.
+      - name: Publicar tag de versión
+        if: steps.version.outputs.new_tag == 'true'
+        run: |
+          git tag "${{ steps.version.outputs.tag }}" "$GITHUB_SHA"
+          git push origin "${{ steps.version.outputs.tag }}"
 
       - name: Redesplegar en Dokploy
         env:

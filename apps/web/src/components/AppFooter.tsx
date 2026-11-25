@@ -1,4 +1,5 @@
 import { Heart } from 'lucide-react';
+import { formatAppVersion } from '../utils/appVersion';
 
 const WEBSITE_URL = 'https://gushm.dev';
 const GITHUB_URL = 'https://github.com/iGusky';
@@ -28,6 +29,10 @@ export function AppFooter() {
         </a>
       </nav>
       <p>© {year} Gus HM. Todos los derechos reservados.</p>
+      <p className="tabular">
+        <span className="sr-only">Versión de la app: </span>
+        {formatAppVersion()}
+      </p>
     </footer>
   );
 }

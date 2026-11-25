@@ -59,7 +59,7 @@ src/
     ThemeToggle.tsx     # Botón para alternar entre tema claro y oscuro
     GoogleSignInButton.tsx # Botón de Google Identity Services; entrega el ID token
     SignOutButton.tsx   # Botón de icono para cerrar sesión
-    AppFooter.tsx       # Créditos del autor; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda)
+    AppFooter.tsx       # Créditos del autor y versión del build; solo en pantallas sin barra de acción fija (Inicio, sesión, tienda)
     StoreList.tsx       # Tiendas de la persona con su rol; la activa con palomita
     StoreSwitcher.tsx   # Tienda activa en el inicio y hoja para cambiarla (solo desde el inicio)
   auth/                 # Sesión (D21, D22): el frontend nunca ve la cookie, solo pregunta a GET /me
@@ -87,6 +87,7 @@ src/
   utils/movements.ts    # Texto, icono, signo de cantidad y conteo de productos de un movimiento
   utils/products.ts     # LOW_STOCK_THRESHOLD y stockStatus
   utils/stores.ts       # STORE_ROLE_LABEL
+  utils/appVersion.ts   # Versión del build inyectada por Vite; AppFooter muestra solo la versión
 ```
 
 ## Reglas

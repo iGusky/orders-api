@@ -21,6 +21,11 @@ COPY apps/web apps/web
 ARG VITE_API_URL
 ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_API_URL=$VITE_API_URL VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+# Identifican el build en la app (pie de página). Opcionales: sin ellos se usa la versión de package.json.
+ARG APP_VERSION
+ARG APP_BUILD
+ARG APP_COMMIT
+ENV APP_VERSION=$APP_VERSION APP_BUILD=$APP_BUILD APP_COMMIT=$APP_COMMIT
 RUN test -n "$VITE_API_URL" || (echo "Falta el build-arg VITE_API_URL" && exit 1)
 RUN pnpm nx build web
 
