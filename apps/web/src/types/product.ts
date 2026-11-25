@@ -18,3 +18,10 @@ export interface CreateProductInput {
   description?: string;
   priceCents: number;
 }
+
+// Body de PATCH /products/:id (D32, solo el dueño). Solo se manda lo que cambia; el stock no se edita.
+export interface UpdateProductInput {
+  name?: string;
+  description?: string | null;  // null borra la descripción
+  priceCents?: number;
+}

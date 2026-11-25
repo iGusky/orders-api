@@ -73,7 +73,7 @@ src/
   hooks/useTheme.ts     # Tema claro/oscuro: lo aplica, lo guarda y sigue al dispositivo si no hay elección
   services/api/         # Cliente de la API: una función por endpoint
     http.ts             # Instancia de axios (baseURL = VITE_API_URL, withCredentials), header X-Store-Id y avisos de 401 y tienda no disponible
-    products.ts         # getProducts, getProductById, createProduct
+    products.ts         # getProducts, getProductById, createProduct, updateProduct
     movements.ts        # getMovements, createMovement
     auth.ts             # loginWithGoogle, logout, getMe, onUnauthorized, onStoreUnavailable, setActiveStoreId
     stores.ts           # createStore
