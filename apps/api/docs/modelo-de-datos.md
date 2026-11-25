@@ -553,6 +553,7 @@ que **otras personas, con su propia cuenta de Google, operen la misma tienda**, 
   | Registrar devolución (`RETURN`) y merma (`SHRINKAGE`)     |  sí   |    sí    |
   | Registrar ajuste (`ADJUSTMENT`, `IN` u `OUT`)             |  sí   |  **no**  |
   | Ver, agregar y quitar empleados                          |  sí   |    no    |
+  | Editar productos: nombre, precio de lista y descripción (D32) |  sí   |  **no**  |
   | Editar los datos de la tienda (cuando exista el endpoint) |  sí   |    no    |
 
 - **RF7. Elegir tienda.** Quien pertenece a más de una tienda elige sobre cuál opera y puede cambiarla en cualquier
@@ -680,11 +681,28 @@ Consecuencias:
 - Es inmutable como el resto del movimiento (D11). Si se quita a un empleado, sus movimientos conservan el autor.
 - `GET /movements` devuelve el autor (`createdBy: { id, name }`).
 
+**D32. El dueño puede editar el nombre, el precio de lista y la descripción de un producto; el stock no se edita.**
+Por qué: un producto mal capturado o un precio que cambió no deberían obligar a crear otro producto. Solo el dueño (P19,
+resuelta): un precio de referencia mal cambiado afecta los importes sugeridos en las ventas de todo el equipo.
+Consecuencias:
+- `PATCH /products/:id` con los campos opcionales `name`, `description` (`null` la borra) y `priceCents`. Un empleado
+  recibe **403** `ROLE_NOT_ALLOWED` (D30); un producto borrado o de otra tienda, **404** `PRODUCT_NOT_FOUND` (D19).
+- El stock solo cambia con movimientos (D2). El DTO no lo acepta y el service copia campo por campo, así que un `stock`
+  en el body se ignora.
+- **Cambiar el precio no altera movimientos registrados**: cada renglón guarda su propio `lineTotalCents` (D5). El
+  nuevo precio solo se sugiere en ventas nuevas.
+- **Cambiar el nombre sí se ve en el historial**: `MovementItem` guarda `productId`, no una copia del nombre, así que
+  la lista de movimientos, los selectores y el inventario muestran el nombre nuevo, también en movimientos pasados. Se
+  acepta porque el caso real es corregir un nombre; la UI lo advierte antes de guardar. Si algún día hace falta el
+  nombre "como se vendió", habría que guardar una copia en `MovementItem` (no recupera lo ya registrado).
+- Registrar un movimiento escribe solo la columna `stock` (`ProductsService.setStock`), para no pisar con valores
+  viejos una edición hecha entre la lectura del producto y la escritura del stock.
+
 ### 9.6 Invariantes
 
 - **I16.** Una persona pertenece como máximo una vez a cada tienda (`StoreMember` único por `(storeId, userId)`).
 - **I17.** Cada tienda tiene exactamente un miembro `OWNER`, y es `Store.ownerId`. Nadie puede quitarlo ni cambiar su rol.
-- **I18.** Solo un miembro `OWNER` puede crear un `ADJUSTMENT` y gestionar miembros e invitaciones.
+- **I18.** Solo un miembro `OWNER` puede crear un `ADJUSTMENT`, editar productos (D32) y gestionar miembros e invitaciones.
 - **I19.** Hay máximo una invitación pendiente por `(storeId, email)`, y no hay invitaciones pendientes para el correo de
   alguien que ya es miembro de esa tienda.
 - **I20.** Toda operación sobre datos de una tienda comprueba la pertenencia **en esa misma petición**. Quitar a un
@@ -729,8 +747,8 @@ El historial vive en `Movement.createdById`, y volver a agregar a la persona no 
 que inició sesión más recientemente (la `Session` más nueva). La comparación no distingue mayúsculas, y los correos
 nuevos se guardan normalizados.
 
-**P19. ¿Puede un empleado editar productos** (precio, nombre) cuando exista el endpoint? Un precio de referencia mal
-cambiado afecta las ventas sugeridas, pero no el stock.
+~~**P19. ¿Puede un empleado editar productos** (precio, nombre) cuando exista el endpoint?~~ Resuelta (2026-11-24):
+no, solo el dueño (D32).
 
 **P20. ¿Necesita la API un endpoint para cambiar de tienda?** Con D28 no: el cambio es solo del cliente. Si se quiere
 recordar la última tienda **entre dispositivos**, haría falta guardarla en `User` (por ejemplo, `lastStoreId`).
